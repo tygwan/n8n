@@ -18,6 +18,15 @@ API_SETUP_GUIDE.md
 .n8n/
 n8n-data/
 
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Telegram session files
+*.session
+*.session-journal
+
 # Logs
 *.log
 logs/

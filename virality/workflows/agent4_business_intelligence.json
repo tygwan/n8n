@@ -1,0 +1,209 @@
+{
+  "name": "Agent 4 - Business Intelligence (WBR)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": 1,
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "schedule-weekly",
+      "name": "Monday 8AM WBR Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://jsonplaceholder.typicode.com/posts",
+        "options": {}
+      },
+      "id": "http-revenue",
+      "name": "Get Revenue Data (Mock)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 150],
+      "notes": "Replace with Postgres/Stripe API"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://jsonplaceholder.typicode.com/users",
+        "options": {}
+      },
+      "id": "http-creators",
+      "name": "Get Creator Metrics (Mock)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 300],
+      "notes": "Replace with Analytics DB"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://jsonplaceholder.typicode.com/comments",
+        "options": {}
+      },
+      "id": "http-missions",
+      "name": "Get Mission Metrics (Mock)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 450],
+      "notes": "Replace with Mission DB"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Weekly Business Review Data Aggregation\n// In production, replace with actual database queries\n\nconst currentWeek = getWeekNumber(new Date());\nconst previousWeek = currentWeek - 1;\n\nfunction getWeekNumber(d) {\n  d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));\n  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));\n  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));\n  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);\n}\n\nconst mockWBRData = {\n  report_period: {\n    week: currentWeek,\n    year: new Date().getFullYear(),\n    start_date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],\n    end_date: new Date().toISOString().split('T')[0]\n  },\n  \n  // Revenue Metrics\n  revenue: {\n    total_payout: 4500,\n    previous_week: 3900,\n    wow_change: 15.4,\n    avg_cpv: 0.0008,\n    target_cpv: 0.001,\n    cpv_status: 'HEALTHY',\n    breakdown_by_category: {\n      'Lifestyle': { payout: 1800, percentage: 40 },\n      'Tech': { payout: 1350, percentage: 30 },\n      'Food': { payout: 900, percentage: 20 },\n      'Beauty': { payout: 450, percentage: 10 }\n    }\n  },\n  \n  // Creator Ecosystem\n  creators: {\n    wau: 245,\n    previous_wau: 258,\n    wau_change: -5.0,\n    total_registered: 1250,\n    new_this_week: 45,\n    churn_this_week: 12,\n    active_rate: 19.6,\n    grade_distribution: {\n      'S': 15,\n      'A': 48,\n      'B': 112,\n      'C': 70\n    },\n    top_performers: [\n      { username: '@sarah_lifestyle', views: 250000, earnings: 185 },\n      { username: '@tech_mike', views: 180000, earnings: 142 },\n      { username: '@food_jenny', views: 165000, earnings: 128 }\n    ]\n  },\n  \n  // Mission Performance\n  missions: {\n    active_missions: 24,\n    completed_this_week: 156,\n    avg_completion_rate: 34.5,\n    avg_views_per_mission: 45000,\n    top_performing_mission: {\n      title: '데스크테리어 꿀템 소개하고 $30 받기',\n      views: 520000,\n      submissions: 45,\n      category: 'Lifestyle'\n    },\n    underperforming: [\n      { title: '뷰티 루틴 공유', category: 'Beauty', completion_rate: 12 }\n    ]\n  },\n  \n  // Risk & Fraud\n  risk: {\n    fraud_blocked_amount: 350,\n    blocked_users: 2,\n    warning_issued: 5,\n    false_positive_rate: 2.1,\n    incidents: [\n      { user: '@user_991', pattern: 'Bot Traffic', amount_blocked: 280, status: 'BANNED' },\n      { user: '@user_102', pattern: 'Low Quality Engagement', amount_blocked: 70, status: 'WARNING' }\n    ]\n  },\n  \n  // Key Issues & Alerts\n  alerts: [\n    {\n      severity: 'WARNING',\n      category: 'Creator Retention',\n      message: 'WAU가 전주 대비 5% 하락',\n      impact: 'Medium',\n      suggested_action: '이탈 크리에이터 대상 리텐션 캠페인 검토'\n    },\n    {\n      severity: 'INFO',\n      category: 'Category Performance',\n      message: 'Beauty 카테고리 CPV가 $0.0012로 다소 높음',\n      impact: 'Low',\n      suggested_action: '예산 재배정 검토 (Beauty → Lifestyle)'\n    }\n  ]\n};\n\nreturn [{ json: mockWBRData }];"
+      },
+      "id": "code-aggregate",
+      "name": "Aggregate WBR Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=당신은 Senior Business Analyst입니다. Weekly Business Review 데이터를 분석하고 경영진을 위한 인사이트를 생성하세요.\n\n[Report Period]\n- Week {{ $json.report_period.week }}, {{ $json.report_period.year }}\n- {{ $json.report_period.start_date }} ~ {{ $json.report_period.end_date }}\n\n[Revenue Metrics]\n- Total Payout: ${{ $json.revenue.total_payout }} (WoW: {{ $json.revenue.wow_change > 0 ? '+' : '' }}{{ $json.revenue.wow_change }}%)\n- Avg CPV: ${{ $json.revenue.avg_cpv }} (Target: ${{ $json.revenue.target_cpv }}, Status: {{ $json.revenue.cpv_status }})\n- Category Breakdown: {{ JSON.stringify($json.revenue.breakdown_by_category) }}\n\n[Creator Ecosystem]\n- WAU: {{ $json.creators.wau }} (WoW: {{ $json.creators.wau_change }}%)\n- New Creators: {{ $json.creators.new_this_week }}, Churned: {{ $json.creators.churn_this_week }}\n- Active Rate: {{ $json.creators.active_rate }}%\n- Grade Distribution: {{ JSON.stringify($json.creators.grade_distribution) }}\n- Top Performers: {{ JSON.stringify($json.creators.top_performers) }}\n\n[Mission Performance]\n- Active Missions: {{ $json.missions.active_missions }}\n- Completed This Week: {{ $json.missions.completed_this_week }}\n- Avg Completion Rate: {{ $json.missions.avg_completion_rate }}%\n- Top Mission: {{ $json.missions.top_performing_mission.title }} ({{ $json.missions.top_performing_mission.views.toLocaleString() }} views)\n- Underperforming: {{ JSON.stringify($json.missions.underperforming) }}\n\n[Risk & Fraud]\n- Fraud Blocked: ${{ $json.risk.fraud_blocked_amount }}\n- Users Blocked: {{ $json.risk.blocked_users }}, Warnings: {{ $json.risk.warning_issued }}\n- Incidents: {{ JSON.stringify($json.risk.incidents) }}\n\n[Current Alerts]\n{{ JSON.stringify($json.alerts, null, 2) }}\n\n[분석 요청]\n1. 핵심 성과 지표(KPI)에 대한 Executive Summary를 작성하세요.\n2. WAU 하락의 잠재적 원인과 대응 방안을 분석하세요.\n3. 카테고리별 수익성 분석 및 예산 재배정 권고사항을 제시하세요.\n4. 다음 주 우선순위 Action Items를 3-5개 도출하세요.\n5. 리스크 요인과 mitigation 전략을 제안하세요.\n\n[출력 형식 - JSON]\n{\n  \"executive_summary\": \"경영진 보고용 3-4문장 요약\",\n  \"health_score\": {\n    \"overall\": 0-100,\n    \"revenue\": 0-100,\n    \"creators\": 0-100,\n    \"missions\": 0-100,\n    \"risk\": 0-100\n  },\n  \"key_insights\": [\n    {\n      \"category\": \"인사이트 카테고리\",\n      \"insight\": \"발견 사항\",\n      \"impact\": \"HIGH/MEDIUM/LOW\",\n      \"trend\": \"UP/DOWN/STABLE\"\n    }\n  ],\n  \"wau_analysis\": {\n    \"root_causes\": [\"WAU 하락 원인들\"],\n    \"retention_strategies\": [\"리텐션 전략들\"]\n  },\n  \"category_recommendations\": {\n    \"reallocate_from\": \"카테고리\",\n    \"reallocate_to\": \"카테고리\",\n    \"percentage\": \"비율\",\n    \"rationale\": \"근거\"\n  },\n  \"action_items\": [\n    {\n      \"priority\": 1-5,\n      \"action\": \"실행 항목\",\n      \"owner\": \"담당자/팀\",\n      \"deadline\": \"기한\",\n      \"expected_impact\": \"예상 효과\"\n    }\n  ],\n  \"risks\": [\n    {\n      \"risk\": \"리스크 요인\",\n      \"probability\": \"HIGH/MEDIUM/LOW\",\n      \"impact\": \"HIGH/MEDIUM/LOW\",\n      \"mitigation\": \"완화 전략\"\n    }\n  ],\n  \"next_week_forecast\": {\n    \"expected_payout\": \"예상 지급액\",\n    \"expected_wau\": \"예상 WAU\",\n    \"key_focus_areas\": [\"집중 영역들\"]\n  }\n}",
+        "options": {
+          "systemMessage": "당신은 인플루언서 마케팅 플랫폼의 Senior Business Analyst입니다.\n\n핵심 원칙:\n1. 데이터 기반의 객관적 분석을 제공합니다.\n2. 실행 가능한 Action Items를 도출합니다.\n3. 리스크와 기회를 균형있게 제시합니다.\n4. 경영진이 빠르게 의사결정할 수 있도록 명확하게 요약합니다.\n5. 모든 응답은 JSON 형식으로 출력합니다."
+        }
+      },
+      "id": "ai-wbr",
+      "name": "AI Business Analyst",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4-turbo",
+        "options": {
+          "temperature": 0.5,
+          "maxTokens": 3000
+        }
+      },
+      "id": "openai-wbr",
+      "name": "OpenAI GPT-4 (WBR)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [660, 520]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Parse AI analysis and prepare final WBR report\nconst wbrData = $('Aggregate WBR Data').first().json;\nconst aiResponse = $input.first().json.output || $input.first().json.text || '';\n\nlet analysis;\ntry {\n  const jsonMatch = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    analysis = JSON.parse(jsonMatch[0]);\n  } else {\n    throw new Error('No JSON found');\n  }\n} catch (e) {\n  analysis = {\n    executive_summary: 'AI 분석 파싱 실패 - 수동 검토 필요',\n    health_score: { overall: 0 },\n    action_items: [{ priority: 1, action: 'AI 응답 수동 검토', owner: 'PM' }],\n    raw_response: aiResponse\n  };\n}\n\nconst reportId = `WBR-${wbrData.report_period.year}-W${wbrData.report_period.week}`;\n\nreturn [{\n  json: {\n    report_id: reportId,\n    generated_at: new Date().toISOString(),\n    period: wbrData.report_period,\n    raw_metrics: {\n      revenue: wbrData.revenue,\n      creators: wbrData.creators,\n      missions: wbrData.missions,\n      risk: wbrData.risk\n    },\n    alerts: wbrData.alerts,\n    ai_analysis: analysis,\n    pdf_link: `https://your-storage.com/reports/${reportId}.pdf`\n  }\n}];"
+      },
+      "id": "code-report",
+      "name": "Generate WBR Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "channel": {
+          "__rl": true,
+          "mode": "name",
+          "value": "#weekly-business-review"
+        },
+        "text": "=📊 *[Weekly Business Review]*\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📋 *{{ $json.report_id }}*\n📅 Week {{ $json.period.week }}, {{ $json.period.year }}\n🕐 Generated: {{ $json.generated_at }}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n🎯 *EXECUTIVE SUMMARY*\n{{ $json.ai_analysis.executive_summary }}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n📈 *HEALTH SCORES*\n🟢 Overall: {{ $json.ai_analysis.health_score?.overall || 'N/A' }}/100\n💰 Revenue: {{ $json.ai_analysis.health_score?.revenue || 'N/A' }}/100\n👥 Creators: {{ $json.ai_analysis.health_score?.creators || 'N/A' }}/100\n🎯 Missions: {{ $json.ai_analysis.health_score?.missions || 'N/A' }}/100\n🛡️ Risk: {{ $json.ai_analysis.health_score?.risk || 'N/A' }}/100\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n💰 *KEY METRICS*\n• Total Payout: *${{ $json.raw_metrics.revenue.total_payout }}* ({{ $json.raw_metrics.revenue.wow_change > 0 ? '+' : '' }}{{ $json.raw_metrics.revenue.wow_change }}% WoW)\n• WAU: *{{ $json.raw_metrics.creators.wau }}* ({{ $json.raw_metrics.creators.wau_change }}% WoW)\n• Avg CPV: ${{ $json.raw_metrics.revenue.avg_cpv }} ✅\n• Fraud Blocked: ${{ $json.raw_metrics.risk.fraud_blocked_amount }}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n⚠️ *ALERTS*\n{{ $json.alerts.map(a => `${a.severity === 'WARNING' ? '🔶' : 'ℹ️'} [${a.category}] ${a.message}`).join('\\n') }}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n✅ *ACTION ITEMS*\n{{ ($json.ai_analysis.action_items || []).slice(0, 5).map((item, i) => `${i+1}. *${item.action}* (${item.owner || 'TBD'}) - ${item.deadline || 'ASAP'}`).join('\\n') }}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n🏆 *TOP PERFORMERS*\n{{ $json.raw_metrics.creators.top_performers.map((c, i) => `${i+1}. ${c.username} - ${c.views.toLocaleString()} views ($${c.earnings})`).join('\\n') }}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n👉 <{{ $json.pdf_link }}|Full Report PDF>",
+        "otherOptions": {}
+      },
+      "id": "slack-wbr",
+      "name": "Slack: WBR Report",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [1100, 200]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $env.EXECUTIVE_EMAIL || 'ceo@example.com' }}",
+        "subject": "=[WBR] Week {{ $json.period.week }} Business Review - Health Score: {{ $json.ai_analysis.health_score?.overall || 'N/A' }}/100",
+        "emailType": "html",
+        "message": "=<h1>📊 Weekly Business Review</h1>\n<p><strong>{{ $json.report_id }}</strong> | Week {{ $json.period.week }}, {{ $json.period.year }}</p>\n\n<h2>🎯 Executive Summary</h2>\n<p>{{ $json.ai_analysis.executive_summary }}</p>\n\n<h2>📈 Key Metrics</h2>\n<table border=\"1\" cellpadding=\"10\">\n<tr><td><strong>Total Payout</strong></td><td>${{ $json.raw_metrics.revenue.total_payout }} ({{ $json.raw_metrics.revenue.wow_change > 0 ? '+' : '' }}{{ $json.raw_metrics.revenue.wow_change }}%)</td></tr>\n<tr><td><strong>WAU</strong></td><td>{{ $json.raw_metrics.creators.wau }} ({{ $json.raw_metrics.creators.wau_change }}%)</td></tr>\n<tr><td><strong>Fraud Blocked</strong></td><td>${{ $json.raw_metrics.risk.fraud_blocked_amount }}</td></tr>\n</table>\n\n<h2>✅ Priority Actions</h2>\n<ol>\n{{ ($json.ai_analysis.action_items || []).slice(0, 5).map(item => '<li><strong>' + item.action + '</strong> - ' + (item.owner || 'TBD') + '</li>').join('') }}\n</ol>\n\n<p><a href=\"{{ $json.pdf_link }}\">Download Full Report (PDF)</a></p>",
+        "options": {}
+      },
+      "id": "email-executive",
+      "name": "Email: Executive Report",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1100, 400],
+      "notes": "Configure Gmail credentials"
+    }
+  ],
+  "connections": {
+    "Monday 8AM WBR Trigger": {
+      "main": [
+        [
+          { "node": "Get Revenue Data (Mock)", "type": "main", "index": 0 },
+          { "node": "Get Creator Metrics (Mock)", "type": "main", "index": 0 },
+          { "node": "Get Mission Metrics (Mock)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get Revenue Data (Mock)": {
+      "main": [
+        [{ "node": "Aggregate WBR Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Creator Metrics (Mock)": {
+      "main": [
+        [{ "node": "Aggregate WBR Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Mission Metrics (Mock)": {
+      "main": [
+        [{ "node": "Aggregate WBR Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Aggregate WBR Data": {
+      "main": [
+        [{ "node": "AI Business Analyst", "type": "main", "index": 0 }]
+      ]
+    },
+    "OpenAI GPT-4 (WBR)": {
+      "ai_languageModel": [
+        [{ "node": "AI Business Analyst", "type": "ai_languageModel", "index": 0 }]
+      ]
+    },
+    "AI Business Analyst": {
+      "main": [
+        [{ "node": "Generate WBR Report", "type": "main", "index": 0 }]
+      ]
+    },
+    "Generate WBR Report": {
+      "main": [
+        [
+          { "node": "Slack: WBR Report", "type": "main", "index": 0 },
+          { "node": "Email: Executive Report", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "timezone": "Asia/Seoul"
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "Business Intelligence" },
+    { "name": "WBR" },
+    { "name": "Analytics" }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2024-11-26T00:00:00.000Z",
+  "versionId": "1"
+}

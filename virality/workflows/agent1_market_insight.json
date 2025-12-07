@@ -1,0 +1,174 @@
+{
+  "name": "Agent 1 - Market Insight (Blue Ocean Finder)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Daily 9AM Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://jsonplaceholder.typicode.com/posts",
+        "options": {}
+      },
+      "id": "http-tiktok",
+      "name": "Get TikTok Trends (Mock)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 200],
+      "notes": "Replace with actual TikTok Trends API"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://jsonplaceholder.typicode.com/users",
+        "options": {}
+      },
+      "id": "http-competitor",
+      "name": "Get Competitor Data (Mock)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 400],
+      "notes": "Replace with competitor mission database"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Market Insight - Blue Ocean Analysis\n// Merge TikTok trends and competitor data\n\nconst mockTrends = [\n  { keyword: '#DeskSetup', growth_rate: 150, views: 500000, category: 'Lifestyle' },\n  { keyword: '#TechMinimalist', growth_rate: 180, views: 400000, category: 'Tech' },\n  { keyword: '#WFH', growth_rate: 120, views: 300000, category: 'Lifestyle' },\n  { keyword: '#CodingASMR', growth_rate: 200, views: 250000, category: 'Tech' },\n  { keyword: '#MorningRoutine', growth_rate: 95, views: 600000, category: 'Lifestyle' }\n];\n\nconst mockCompetitorMissions = [\n  { keyword: '#MorningRoutine', mission_count: 12, platform: 'CompetitorA' },\n  { keyword: '#BeautyHacks', mission_count: 15, platform: 'CompetitorB' },\n  { keyword: '#FoodASMR', mission_count: 8, platform: 'CompetitorA' }\n];\n\n// Find Blue Ocean opportunities\nconst competitorKeywords = new Set(\n  mockCompetitorMissions.map(m => m.keyword.toLowerCase())\n);\n\nconst opportunities = mockTrends\n  .filter(t => !competitorKeywords.has(t.keyword.toLowerCase()))\n  .sort((a, b) => b.growth_rate - a.growth_rate);\n\nconst topOpportunity = opportunities[0];\n\nreturn [{\n  json: {\n    analysis_date: new Date().toISOString().split('T')[0],\n    analysis_time: new Date().toISOString(),\n    total_trends_analyzed: mockTrends.length,\n    competitor_coverage: mockCompetitorMissions.length,\n    opportunities_found: opportunities.length,\n    top_opportunity: topOpportunity,\n    all_opportunities: opportunities,\n    competitor_missions: mockCompetitorMissions\n  }\n}];"
+      },
+      "id": "code-analysis",
+      "name": "Analyze Market Gaps",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=당신은 10년차 TikTok/Instagram 마케팅 전략가입니다.\n\n[분석 데이터]\n- 분석 일자: {{ $json.analysis_date }}\n- 분석된 트렌드 수: {{ $json.total_trends_analyzed }}\n- 경쟁사 미션 수: {{ $json.competitor_coverage }}\n- 발견된 기회: {{ $json.opportunities_found }}개\n\n[Top Blue Ocean 기회]\n- 키워드: {{ $json.top_opportunity.keyword }}\n- 성장률: {{ $json.top_opportunity.growth_rate }}%\n- 예상 조회수: {{ $json.top_opportunity.views }}\n- 카테고리: {{ $json.top_opportunity.category }}\n\n[전체 기회 목록]\n{{ JSON.stringify($json.all_opportunities, null, 2) }}\n\n[분석 요청]\n1. Top 기회 키워드에 대해 마이크로 인플루언서(10K-50K 팔로워)가 참여할 수 있는 구체적인 미션을 설계하세요.\n2. 미션 제목에는 구체적인 보상 금액($)을 포함하세요.\n3. 성공 방정식(Hook, Visual, Sound)을 제시하세요.\n\n[출력 형식 - 반드시 JSON]\n{\n  \"keyword\": \"발견된 Blue Ocean 키워드\",\n  \"growth_rate\": \"성장률 %\",\n  \"potential_views\": \"예상 도달 조회수\",\n  \"mission_title\": \"미션 제목 (보상 포함, 예: '당신의 데스크테리어 꿀템을 소개하고 $30 받으세요')\",\n  \"target_creator\": \"타겟 크리에이터 프로필\",\n  \"winning_formula\": {\n    \"hook\": \"영상 시작 5초 훅 (시청자 attention 잡는 방법)\",\n    \"visual\": \"비주얼 스타일 (촬영 기법, 조명 등)\",\n    \"sound\": \"사운드/BGM 추천\"\n  },\n  \"strategic_insight\": \"PM을 위한 전략적 인사이트 (왜 이 키워드가 기회인지)\",\n  \"estimated_cpm\": \"예상 CPM ($)\",\n  \"mission_budget\": \"추천 미션 예산 ($)\"\n}",
+        "options": {
+          "systemMessage": "당신은 숏폼 바이럴 콘텐츠 전문가입니다. 마이크로 인플루언서 플랫폼의 PM을 위해 데이터 기반 Blue Ocean 전략을 수립합니다.\n\n핵심 원칙:\n1. 경쟁사가 놓친 고성장 키워드를 발굴합니다.\n2. 구체적이고 실행 가능한 미션을 설계합니다.\n3. 모든 응답은 JSON 형식으로 출력합니다.\n4. 보상 금액은 현실적으로 책정합니다 ($20-$100 범위)."
+        }
+      },
+      "id": "ai-agent",
+      "name": "AI Strategic Analyst",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4-turbo",
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 2000
+        }
+      },
+      "id": "openai-model",
+      "name": "OpenAI GPT-4 Turbo",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [660, 520]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Parse AI response and prepare Slack message\nconst aiResponse = $input.first().json.output || $input.first().json.text || '';\n\nlet parsed;\ntry {\n  const jsonMatch = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    parsed = JSON.parse(jsonMatch[0]);\n  } else {\n    throw new Error('No JSON found');\n  }\n} catch (e) {\n  parsed = {\n    keyword: 'Parse Error',\n    mission_title: 'AI 분석 결과를 확인하세요',\n    potential_views: 'N/A',\n    strategic_insight: aiResponse,\n    winning_formula: { hook: 'N/A', visual: 'N/A', sound: 'N/A' }\n  };\n}\n\nconst reportDate = new Date().toISOString().split('T')[0];\nconst reportId = `MKT-${reportDate}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;\n\nreturn [{\n  json: {\n    report_id: reportId,\n    report_date: reportDate,\n    ...parsed,\n    pdf_link: `https://your-storage.com/reports/market-insight-${reportDate}.pdf`,\n    raw_ai_response: aiResponse\n  }\n}];"
+      },
+      "id": "code-parse",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "channel": {
+          "__rl": true,
+          "mode": "name",
+          "value": "#market-insights"
+        },
+        "text": "=🚀 *[Market Opportunity Alert]*\n━━━━━━━━━━━━━━━━━━━━━━\n\n📋 *Report ID*: {{ $json.report_id }}\n📅 *분석일*: {{ $json.report_date }}\n\n🔵 *Blue Ocean 키워드*: {{ $json.keyword }}\n📈 *성장률*: {{ $json.growth_rate }}\n👀 *예상 조회수*: {{ $json.potential_views }}\n\n━━━━━━━━━━━━━━━━━━━━━━\n🎯 *추천 미션*\n{{ $json.mission_title }}\n\n👤 *타겟 크리에이터*: {{ $json.target_creator }}\n💰 *추천 예산*: {{ $json.mission_budget || 'TBD' }}\n\n━━━━━━━━━━━━━━━━━━━━━━\n💡 *성공 방정식*\n• *Hook*: {{ $json.winning_formula?.hook || 'N/A' }}\n• *Visual*: {{ $json.winning_formula?.visual || 'N/A' }}\n• *Sound*: {{ $json.winning_formula?.sound || 'N/A' }}\n\n━━━━━━━━━━━━━━━━━━━━━━\n📊 *전략적 인사이트*\n{{ $json.strategic_insight }}\n\n👉 <{{ $json.pdf_link }}|전략 브리프 다운로드>",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "id": "slack-alert",
+      "name": "Slack Alert",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [1100, 300],
+      "notes": "Configure your Slack credentials"
+    }
+  ],
+  "connections": {
+    "Daily 9AM Trigger": {
+      "main": [
+        [
+          { "node": "Get TikTok Trends (Mock)", "type": "main", "index": 0 },
+          { "node": "Get Competitor Data (Mock)", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get TikTok Trends (Mock)": {
+      "main": [
+        [{ "node": "Analyze Market Gaps", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Competitor Data (Mock)": {
+      "main": [
+        [{ "node": "Analyze Market Gaps", "type": "main", "index": 0 }]
+      ]
+    },
+    "Analyze Market Gaps": {
+      "main": [
+        [{ "node": "AI Strategic Analyst", "type": "main", "index": 0 }]
+      ]
+    },
+    "OpenAI GPT-4 Turbo": {
+      "ai_languageModel": [
+        [{ "node": "AI Strategic Analyst", "type": "ai_languageModel", "index": 0 }]
+      ]
+    },
+    "AI Strategic Analyst": {
+      "main": [
+        [{ "node": "Parse AI Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [{ "node": "Slack Alert", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "timezone": "Asia/Seoul"
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "Market Insight" },
+    { "name": "AI Agent" },
+    { "name": "Blue Ocean" }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2024-11-26T00:00:00.000Z",
+  "versionId": "1"
+}

@@ -79,6 +79,19 @@ tiktok_access_token : [발급처: https://ads.tiktok.com/marketing_api/docs]
 ```
 - TikTok 광고 계정 승인 필요
 
+### Apify (TikTok Scraper)
+```
+apify_api_token : [발급처: https://console.apify.com/account/integrations]
+```
+- 무료: 5,000 Actor compute units/월
+- 사용처: `virality/workflows/virality_full_workflow.json`
+- Actor: clockworks/tiktok-scraper
+
+**발급 방법**:
+1. Apify 계정 생성
+2. Settings > Integrations
+3. API Token 생성
+
 ---
 
 ## 🔒 보안 주의사항

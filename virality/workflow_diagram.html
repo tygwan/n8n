@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virality Workflow</title>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+    </script>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; padding: 20px; background-color: #fff; }
+        .mermaid { width: 100%; max-width: 1200px; }
+    </style>
+</head>
+<body>
+    <div class="mermaid">
+    graph TD
+        %% Styles
+        classDef trigger fill:#e1f5fe,stroke:#01579b,stroke-width:2px;
+        classDef slack fill:#fce4ec,stroke:#880e4f,stroke-width:2px;
+        classDef ai fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px;
+        classDef logic fill:#fff3e0,stroke:#e65100,stroke-width:2px;
+        classDef data fill:#f3e5f5,stroke:#4a148c,stroke-width:2px;
+
+        subgraph Market_Insight [Market Insight]
+            direction TB
+            T1[Daily 9AM Trigger]:::trigger --> N1[Get TikTok Trends]:::data
+            T1 --> N2[Get Competitor Data]:::data
+            N1 --> N3[Analyze Market Gaps]:::logic
+            N2 --> N3
+            N3 --> N4[AI Strategic Analyst]:::ai
+            N4 --> N5[Parse AI Response]:::logic
+            N5 --> N6[Slack Alert]:::slack
+        end
+
+        subgraph Settlement_FDS [Settlement & FDS]
+            direction TB
+            T2[Daily 6AM Settlement]:::trigger --> N7[Get Creator View Data]:::data
+            N7 --> N8[Prepare Settlement Data]:::logic
+            N8 --> N9[Calculate Dynamic Reward]:::logic
+            N9 --> N10[AI Fraud Detection]:::ai
+            N10 --> N11[Process FDS Result]:::logic
+            N11 --> N12{Check Risk Level}:::logic
+            N12 -- High Risk --> N13[Alert: High Risk]:::slack
+            N12 -- Approved --> N14[Log: Approved Settlement]:::slack
+        end
+
+        subgraph AB_Testing [A/B Testing]
+            direction TB
+            T3[Mission Click Webhook]:::trigger --> N15[A/B Group Assignment]:::logic
+            N15 --> N16{Route by Group}:::logic
+            N16 -- Group A --> N17[Prepare Group A Response]:::logic
+            N16 -- Group B --> N18[Prepare Group B Response]:::logic
+            N17 --> N19[Respond to Webhook]:::logic
+            N18 --> N19
+
+            T4[Daily Report Trigger]:::trigger --> N20[Aggregate Experiment Data]:::logic
+            N20 --> N21[AI Statistical Analysis]:::ai
+            N21 --> N22[Generate Report]:::logic
+            N22 --> N23[Slack: Growth Report]:::slack
+        end
+
+        subgraph WBR [Weekly Business Review]
+            direction TB
+            T5[Monday 8AM WBR Trigger]:::trigger --> N24[Get Revenue Data]:::data
+            T5 --> N25[Get Creator Metrics]:::data
+            T5 --> N26[Get Mission Metrics]:::data
+            N24 --> N27[Aggregate WBR Data]:::logic
+            N25 --> N27
+            N26 --> N27
+            N27 --> N28[AI Business Analyst]:::ai
+            N28 --> N29[Generate WBR Report]:::logic
+            N29 --> N30[Slack: WBR Report]:::slack
+        end
+    </div>
+</body>
+</html>

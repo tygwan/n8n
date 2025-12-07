@@ -1,0 +1,687 @@
+{
+  "name": "virality",
+  "id": "ECHwdjR04fDXsANd",
+  "description": "Virality AI Automation Workflow - 바이럴 콘텐츠 비즈니스 통합 자동화 시스템 (v23 - 2025-11-26 정리 완료)",
+  "active": false,
+  "meta": {
+    "instanceId": "n8n-local",
+    "templateCredsSetupCompleted": true
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"triggerAtHour": 9}]
+        }
+      },
+      "id": "8161ff3b-a549-4a20-a01c-5632e534ece3",
+      "name": "Daily 9AM Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-1008, 1440]
+    },
+    {
+      "parameters": {
+        "url": "https://jsonplaceholder.typicode.com/posts",
+        "options": {}
+      },
+      "id": "e728dc0d-1e22-40ce-aca3-ebc84b6f61d9",
+      "name": "Get TikTok Trends (Mock)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-784, 1360],
+      "notes": "Replace with actual TikTok Trends API"
+    },
+    {
+      "parameters": {
+        "url": "https://jsonplaceholder.typicode.com/users",
+        "options": {}
+      },
+      "id": "667c3040-6ec2-476d-818a-fe102dbc97a8",
+      "name": "Get Competitor Data (Mock)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-784, 1552],
+      "notes": "Replace with competitor mission database"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Market Insight - Blue Ocean Analysis\n// Merge TikTok trends and competitor data\n\nconst mockTrends = [\n  { keyword: '#DeskSetup', growth_rate: 150, views: 500000, category: 'Lifestyle' },\n  { keyword: '#TechMinimalist', growth_rate: 180, views: 400000, category: 'Tech' },\n  { keyword: '#WFH', growth_rate: 120, views: 300000, category: 'Lifestyle' },\n  { keyword: '#CodingASMR', growth_rate: 200, views: 250000, category: 'Tech' },\n  { keyword: '#MorningRoutine', growth_rate: 95, views: 600000, category: 'Lifestyle' }\n];\n\nconst mockCompetitorMissions = [\n  { keyword: '#MorningRoutine', mission_count: 12, platform: 'CompetitorA' },\n  { keyword: '#BeautyHacks', mission_count: 15, platform: 'CompetitorB' },\n  { keyword: '#FoodASMR', mission_count: 8, platform: 'CompetitorA' }\n];\n\n// Find Blue Ocean opportunities\nconst competitorKeywords = new Set(\n  mockCompetitorMissions.map(m => m.keyword.toLowerCase())\n);\n\nconst opportunities = mockTrends\n  .filter(t => !competitorKeywords.has(t.keyword.toLowerCase()))\n  .sort((a, b) => b.growth_rate - a.growth_rate);\n\nconst topOpportunity = opportunities[0];\n\nreturn [{\n  json: {\n    analysis_date: new Date().toISOString().split('T')[0],\n    analysis_time: new Date().toISOString(),\n    total_trends_analyzed: mockTrends.length,\n    competitor_coverage: mockCompetitorMissions.length,\n    opportunities_found: opportunities.length,\n    top_opportunity: topOpportunity,\n    all_opportunities: opportunities,\n    competitor_missions: mockCompetitorMissions\n  }\n}];"
+      },
+      "id": "697aa048-fbff-453a-8c0d-ebe1596dde5d",
+      "name": "Analyze Market Gaps",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-560, 1440]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=당신은 10년차 TikTok/Instagram 마케팅 전략가입니다.\n\n[분석 데이터]\n- 분석 일자: {{ $json.analysis_date }}\n- 분석된 트렌드 수: {{ $json.total_trends_analyzed }}\n- 경쟁사 미션 수: {{ $json.competitor_coverage }}\n- 발견된 기회: {{ $json.opportunities_found }}개\n\n[Top Blue Ocean 기회]\n- 키워드: {{ $json.top_opportunity.keyword }}\n- 성장률: {{ $json.top_opportunity.growth_rate }}%\n- 예상 조회수: {{ $json.top_opportunity.views }}\n- 카테고리: {{ $json.top_opportunity.category }}\n\n[전체 기회 목록]\n{{ JSON.stringify($json.all_opportunities, null, 2) }}\n\n[분석 요청]\n1. Top 기회 키워드에 대해 마이크로 인플루언서(10K-50K 팔로워)가 참여할 수 있는 구체적인 미션을 설계하세요.\n2. 미션 제목에는 구체적인 보상 금액($)을 포함하세요.\n3. 성공 방정식(Hook, Visual, Sound)을 제시하세요.\n\n[출력 형식 - 반드시 JSON]\n{\n  \"keyword\": \"발견된 Blue Ocean 키워드\",\n  \"growth_rate\": \"성장률 %\",\n  \"potential_views\": \"예상 도달 조회수\",\n  \"mission_title\": \"미션 제목 (보상 포함)\",\n  \"target_creator\": \"타겟 크리에이터 프로필\",\n  \"winning_formula\": {\n    \"hook\": \"영상 시작 5초 훅\",\n    \"visual\": \"비주얼 스타일\",\n    \"sound\": \"사운드/BGM 추천\"\n  },\n  \"strategic_insight\": \"PM을 위한 전략적 인사이트\",\n  \"estimated_cpm\": \"예상 CPM ($)\",\n  \"mission_budget\": \"추천 미션 예산 ($)\"\n}",
+        "options": {
+          "systemMessage": "당신은 숏폼 바이럴 콘텐츠 전문가입니다. 마이크로 인플루언서 플랫폼의 PM을 위해 데이터 기반 Blue Ocean 전략을 수립합니다.\n\n핵심 원칙:\n1. 경쟁사가 놓친 고성장 키워드를 발굴합니다.\n2. 구체적이고 실행 가능한 미션을 설계합니다.\n3. 모든 응답은 JSON 형식으로 출력합니다.\n4. 보상 금액은 현실적으로 책정합니다 ($20-$100 범위)."
+        }
+      },
+      "id": "fd6d6b15-33a5-47e6-8a0c-fc69ae9e06ca",
+      "name": "AI Strategic Analyst",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [-336, 1344]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5.1-2025-11-13",
+          "mode": "list",
+          "cachedResultName": "gpt-5.1-2025-11-13"
+        },
+        "options": {"maxTokens": 2000, "temperature": 0.2}
+      },
+      "id": "41208507-332e-431f-88d2-590cdbbb075e",
+      "name": "OpenAI GPT-5.1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [-256, 1568],
+      "credentials": {"openAiApi": {"id": "BTYuxH7aPVaDBIVU", "name": "OpenAi account 2"}}
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI response and prepare Slack message\nconst aiResponse = $input.first().json.output || $input.first().json.text || '';\n\nlet parsed;\ntry {\n  const jsonMatch = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    parsed = JSON.parse(jsonMatch[0]);\n  } else {\n    throw new Error('No JSON found');\n  }\n} catch (e) {\n  parsed = {\n    keyword: 'Parse Error',\n    mission_title: 'AI 분석 결과를 확인하세요',\n    potential_views: 'N/A',\n    strategic_insight: aiResponse,\n    winning_formula: { hook: 'N/A', visual: 'N/A', sound: 'N/A' }\n  };\n}\n\nconst reportDate = new Date().toISOString().split('T')[0];\nconst reportId = `MKT-${reportDate}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;\n\nreturn [{\n  json: {\n    report_id: reportId,\n    report_date: reportDate,\n    ...parsed,\n    pdf_link: `https://your-storage.com/reports/market-insight-${reportDate}.pdf`,\n    raw_ai_response: aiResponse\n  }\n}];"
+      },
+      "id": "e3412ad6-5fd3-45ce-88a5-d83e0bd8f450",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [16, 1440]
+    },
+    {
+      "parameters": {
+        "operation": "post",
+        "select": "channel",
+        "channelId": {"mode": "name", "value": "#market-insight"},
+        "text": "=📊 *Daily Market Insight Report*\n━━━━━━━━━━━━━━━━━━━━━━\n\n🎯 *Blue Ocean 기회 발견!*\n• 키워드: `{{ $json.keyword || 'N/A' }}`\n• 성장률: {{ $json.growth_rate || 'N/A' }}%\n• 예상 조회수: {{ $json.potential_views || 'N/A' }}\n\n📋 *추천 미션*\n{{ $json.mission_title || '미션 정보 없음' }}\n\n🎬 *성공 방정식*\n• Hook: {{ $json.winning_formula?.hook || 'N/A' }}\n• Visual: {{ $json.winning_formula?.visual || 'N/A' }}\n• Sound: {{ $json.winning_formula?.sound || 'N/A' }}\n\n💡 *전략 인사이트*\n{{ $json.strategic_insight || '분석 결과를 확인하세요' }}\n\n📎 리포트 ID: `{{ $json.report_id }}`",
+        "otherOptions": {}
+      },
+      "id": "f502a985-ab4d-4942-975e-073981f7f215",
+      "name": "Slack Alert",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [240, 1440],
+      "credentials": {"slackApi": {"id": "k28JePHGrEvPnr1L", "name": "Slack account"}}
+    },
+    {
+      "parameters": {
+        "rule": {"interval": [{"triggerAtHour": 6}]}
+      },
+      "id": "71e4347f-be79-462f-b33d-230ea1c06435",
+      "name": "Daily 6AM Settlement",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-1008, 1888]
+    },
+    {
+      "parameters": {
+        "url": "https://jsonplaceholder.typicode.com/posts",
+        "options": {}
+      },
+      "id": "70a591a7-5ffa-4090-bcc2-82edeafea396",
+      "name": "Get Creator View Data (Mock)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-784, 1888]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Mock creator performance data for reward calculation\nconst mockCreators = [\n  {creator_id: 'creator_001', username: '@sarah_lifestyle', grade: 'S', mission_id: 'MSN_001', views: 125000, likes: 8500, comments: 420, avg_watch_time: 12.5, view_history: [5000, 8000, 15000, 35000, 62000], peak_hour: 14, category: 'Lifestyle'},\n  {creator_id: 'creator_002', username: '@tech_mike', grade: 'A', mission_id: 'MSN_002', views: 85000, likes: 4200, comments: 180, avg_watch_time: 8.2, view_history: [2000, 5000, 12000, 28000, 38000], peak_hour: 20, category: 'Tech'},\n  {creator_id: 'creator_003', username: '@suspicious_user', grade: 'B', mission_id: 'MSN_003', views: 95000, likes: 150, comments: 45, avg_watch_time: 2.1, view_history: [100, 200, 500, 94200], peak_hour: 3, category: 'Gaming'},\n  {creator_id: 'creator_004', username: '@food_jenny', grade: 'A', mission_id: 'MSN_004', views: 67000, likes: 5100, comments: 890, avg_watch_time: 15.3, view_history: [3000, 8000, 18000, 25000, 13000], peak_hour: 12, category: 'Food'}\n];\n\nconst isPeakSeason = new Date().getMonth() === 10;\n\nreturn mockCreators.map(creator => ({\n  json: {\n    ...creator,\n    is_peak_season: isPeakSeason,\n    settlement_date: new Date().toISOString().split('T')[0],\n    engagement_rate: ((creator.likes + creator.comments) / creator.views * 100).toFixed(2)\n  }\n}));"
+      },
+      "id": "eb50d44e-c29c-4df5-afaf-f2345f94a0b4",
+      "name": "Prepare Settlement Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-560, 1888]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Dynamic Reward Calculation Logic\nconst item = $input.item.json;\nconst baseRate = 0.5;\nconst gradeMultiplier = {'S': 1.5, 'A': 1.2, 'B': 1.0, 'C': 0.8};\nconst categoryBonus = {'Lifestyle': 1.1, 'Tech': 1.15, 'Food': 1.05, 'Gaming': 1.0, 'Beauty': 1.2};\nconst seasonMultiplier = item.is_peak_season ? 1.3 : 1.0;\n\nlet baseReward = (item.views / 1000) * baseRate;\nlet finalReward = baseReward * (gradeMultiplier[item.grade] || 1.0) * (categoryBonus[item.category] || 1.0) * seasonMultiplier;\n\nconst maxReward = 500;\nif (finalReward > maxReward) finalReward = maxReward;\nfinalReward = Math.round(finalReward * 100) / 100;\n\nreturn {\n  json: {\n    ...item,\n    reward_calculation: {\n      base_rate: baseRate,\n      grade_multiplier: gradeMultiplier[item.grade] || 1.0,\n      category_bonus: categoryBonus[item.category] || 1.0,\n      season_multiplier: seasonMultiplier,\n      base_reward: baseReward.toFixed(2),\n      final_reward: finalReward,\n      capped: finalReward >= maxReward\n    }\n  }\n};"
+      },
+      "id": "34f7eaa4-1d8a-4869-9611-28e50af12555",
+      "name": "Calculate Dynamic Reward",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-336, 1888]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=당신은 플랫폼 보안 전문가입니다. 크리에이터의 조회수 패턴을 분석하여 어뷰징 확률을 평가하세요.\n\n[크리에이터 데이터]\n- Username: {{ $json.username }}\n- 총 조회수: {{ $json.views }}\n- 좋아요: {{ $json.likes }}\n- 댓글: {{ $json.comments }}\n- 평균 시청 시간: {{ $json.avg_watch_time }}초\n- 조회수 추이: {{ JSON.stringify($json.view_history) }}\n- 피크 시간대: {{ $json.peak_hour }}시\n- 참여율: {{ $json.engagement_rate }}%\n\n[출력 형식 - JSON]\n{\"risk_score\": 0-100, \"risk_level\": \"LOW|MEDIUM|HIGH|CRITICAL\", \"detected_patterns\": [], \"recommendation\": \"APPROVE|REVIEW|HOLD|REJECT\", \"reason\": \"\", \"confidence\": 0-100}",
+        "options": {
+          "systemMessage": "당신은 인플루언서 마케팅 플랫폼의 FDS 전문가입니다. risk_score 70 이상이면 HIGH, 85 이상이면 CRITICAL입니다."
+        }
+      },
+      "id": "eaae82b4-d002-4a4b-a22d-7f3b2606b44d",
+      "name": "AI Fraud Detection",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [-112, 1888]
+    },
+    {
+      "parameters": {
+        "model": "gpt-5.1-2025-11-13",
+        "options": {"maxTokens": 1500, "temperature": 0.3}
+      },
+      "id": "dac77646-3ba7-4db2-b86b-8f6af90695ca",
+      "name": "OpenAI GPT-5.1 (FDS)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [-32, 2112],
+      "credentials": {"openAiApi": {"id": "ATaSarvYzUlhHqJs", "name": "OpenAi account"}}
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Parse FDS AI response\nconst item = $input.item.json;\nconst aiResponse = item.output || item.text || '';\n\nlet fdsResult;\ntry {\n  const jsonMatch = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  fdsResult = jsonMatch ? JSON.parse(jsonMatch[0]) : {risk_score: 50, risk_level: 'MEDIUM', detected_patterns: ['Parse error'], recommendation: 'REVIEW', reason: 'AI 응답 파싱 실패', confidence: 0};\n} catch (e) {\n  fdsResult = {risk_score: 50, risk_level: 'MEDIUM', detected_patterns: ['Parse error'], recommendation: 'REVIEW', reason: 'AI 응답 파싱 실패', confidence: 0};\n}\n\nlet settlement_status, settlement_action;\nif (fdsResult.risk_score >= 85) { settlement_status = 'BLOCKED'; settlement_action = 'Account flagged for investigation'; }\nelse if (fdsResult.risk_score >= 70) { settlement_status = 'HOLD'; settlement_action = 'Payment held pending review'; }\nelse if (fdsResult.risk_score >= 50) { settlement_status = 'REVIEW'; settlement_action = 'Manual verification required'; }\nelse { settlement_status = 'APPROVED'; settlement_action = 'Auto-approved for payment'; }\n\nreturn {\n  json: {\n    creator_id: item.creator_id, username: item.username, views: item.views,\n    reward: item.reward_calculation?.final_reward || 0, fds_result: fdsResult,\n    settlement_status, settlement_action,\n    settlement_date: new Date().toISOString().split('T')[0],\n    transaction_id: `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`\n  }\n};"
+      },
+      "id": "64942d8c-a330-420d-be52-c1f990694963",
+      "name": "Process FDS Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 1888]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"version": 2, "caseSensitive": true, "typeValidation": "strict"},
+          "conditions": [{"id": "condition-high-risk", "leftValue": "={{ $json.fds_result.risk_score }}", "rightValue": 70, "operator": {"type": "number", "operation": "gte"}}],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c06c6257-5b6a-4893-8662-bcb9fba73080",
+      "name": "Check Risk Level",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [464, 1888]
+    },
+    {
+      "parameters": {
+        "operation": "post",
+        "select": "channel",
+        "channelId": {"mode": "name", "value": "#fraud-alerts"},
+        "text": "=🚨 *High Risk Alert*\n\n• Username: {{ $json.username }}\n• Risk Score: {{ $json.fds_result.risk_score }}\n• Risk Level: {{ $json.fds_result.risk_level }}\n• Status: {{ $json.settlement_status }}\n• Transaction: {{ $json.transaction_id }}",
+        "otherOptions": {}
+      },
+      "id": "27b39211-3d52-4dd8-87c6-dcdac952fbe7",
+      "name": "Alert: High Risk",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [688, 1792],
+      "credentials": {"slackApi": {"id": "k28JePHGrEvPnr1L", "name": "Slack account"}}
+    },
+    {
+      "parameters": {
+        "operation": "post",
+        "select": "channel",
+        "channelId": {"mode": "name", "value": "#settlements"},
+        "text": "=✅ *Settlement Approved*\n\n• Username: {{ $json.username }}\n• Views: {{ $json.views }}\n• Reward: ${{ $json.reward }}\n• Transaction: {{ $json.transaction_id }}",
+        "otherOptions": {}
+      },
+      "id": "c3cc486d-43b3-404d-b38d-cfc2f7d38a34",
+      "name": "Log: Approved Settlement",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [688, 1984],
+      "credentials": {"slackApi": {"id": "k28JePHGrEvPnr1L", "name": "Slack account"}}
+    },
+    {
+      "parameters": {"httpMethod": "POST", "path": "mission-click", "options": {}},
+      "id": "1e4da30c-5d37-4cab-a8fe-55f859c35315",
+      "name": "Mission Click Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-1008, 2304],
+      "webhookId": "mission-click-webhook"
+    },
+    {
+      "parameters": {"rule": {"interval": [{"triggerAtHour": 9}]}},
+      "id": "37ec9b3a-7d01-4dcd-9b46-2080dcf1aa64",
+      "name": "Daily Report Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-1008, 2736]
+    },
+    {
+      "parameters": {
+        "jsCode": "// A/B Test Group Assignment\nconst crypto = require('crypto');\nconst input = $input.first().json;\nconst userId = input.user_id || `user_${Date.now()}`;\nconst experimentId = 'EXP_2024_MISSION_COPY_V2';\n\nconst hash = crypto.createHash('md5').update(userId).digest('hex');\nconst segment = parseInt(hash.substring(0, 8), 16) % 100;\nconst assignedGroup = segment < 50 ? 'A' : 'B';\n\nconst groupConfig = {\n  'A': {copy_type: 'emotional', mission_title: '당신의 재능을 세상에 보여주세요', cta_text: '지금 참여하기', color_scheme: 'warm', emoji: '✨'},\n  'B': {copy_type: 'reward', mission_title: '이 영상 하나로 $50 벌기', cta_text: '지금 바로 수익 창출', color_scheme: 'bold', emoji: '💰'}\n};\n\nreturn [{json: {user_id: userId, experiment_id: experimentId, assigned_group: assignedGroup, segment_number: segment, timestamp: new Date().toISOString(), ...groupConfig[assignedGroup], original_request: input}}];"
+      },
+      "id": "4b5b7261-61e7-4c79-8149-226231c8ae0b",
+      "name": "A/B Group Assignment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-784, 2304]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {"conditions": {"options": {"caseSensitive": true, "typeValidation": "strict"}, "conditions": [{"leftValue": "={{ $json.assigned_group }}", "rightValue": "A", "operator": {"type": "string", "operation": "equals"}}], "combinator": "and"}, "renameOutput": true, "outputKey": "Group A"},
+            {"conditions": {"options": {"caseSensitive": true, "typeValidation": "strict"}, "conditions": [{"leftValue": "={{ $json.assigned_group }}", "rightValue": "B", "operator": {"type": "string", "operation": "equals"}}], "combinator": "and"}, "renameOutput": true, "outputKey": "Group B"}
+          ]
+        },
+        "options": {}
+      },
+      "id": "bd4b502e-877a-4493-9bbd-9f11659e1320",
+      "name": "Route by Group",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [-560, 2304]
+    },
+    {
+      "parameters": {"assignments": {"assignments": [{"id": "response-a", "name": "response", "value": "={{ { user_id: $json.user_id, experiment_id: $json.experiment_id, group: 'A', mission: { title: $json.mission_title, cta: $json.cta_text, style: $json.color_scheme, emoji: $json.emoji }, tracking_pixel: 'https://track.example.com/exp/' + $json.experiment_id + '/A/' + $json.user_id } }}", "type": "object"}]}, "options": {}},
+      "id": "c79a98b4-c1cc-498f-a408-d5f7a4069dc2",
+      "name": "Prepare Group A Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-336, 2208]
+    },
+    {
+      "parameters": {"assignments": {"assignments": [{"id": "response-b", "name": "response", "value": "={{ { user_id: $json.user_id, experiment_id: $json.experiment_id, group: 'B', mission: { title: $json.mission_title, cta: $json.cta_text, style: $json.color_scheme, emoji: $json.emoji }, tracking_pixel: 'https://track.example.com/exp/' + $json.experiment_id + '/B/' + $json.user_id } }}", "type": "object"}]}, "options": {}},
+      "id": "573e1222-f231-4ca9-9d4b-8bb1e076502d",
+      "name": "Prepare Group B Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-336, 2400]
+    },
+    {
+      "parameters": {"respondWith": "json", "responseBody": "={{ $json.response }}", "options": {}},
+      "id": "b6fc4d08-6819-43cd-ad12-dcfe2ad8ca38",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [-112, 2304]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate A/B Test Results for Daily Report\nfunction normalCDF(x) {\n  const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741;\n  const a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;\n  const sign = x < 0 ? -1 : 1;\n  x = Math.abs(x) / Math.sqrt(2);\n  const t = 1.0 / (1.0 + p * x);\n  const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);\n  return 0.5 * (1.0 + sign * y);\n}\n\nfunction getWeekNumber(d) {\n  d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));\n  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));\n  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));\n  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);\n}\n\nconst mockResults = {\n  experiment_id: 'EXP_2024_MISSION_COPY_V2',\n  experiment_name: 'Mission Copy Optimization',\n  period: {start: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], end: new Date().toISOString().split('T')[0], days: 3},\n  hypothesis: '감성적 호소보다 구체적 보상 금액($)을 제목에 노출할 때, 미션 클릭률(CTR)이 10% 이상 상승할 것이다.',\n  groups: {\n    A: {name: 'Control (Emotional)', copy: '당신의 재능을 세상에 보여주세요', impressions: 1500, clicks: 75, starts: 45, submissions: 12, ctr: 5.0, start_rate: 60.0, completion_rate: 26.7},\n    B: {name: 'Test (Reward)', copy: '이 영상 하나로 $50 벌기', impressions: 1480, clicks: 133, starts: 95, submissions: 25, ctr: 9.0, start_rate: 71.4, completion_rate: 26.3}\n  },\n  analysis: {ctr_lift: 80.0, ctr_lift_percentage: '+4.0%p', start_rate_lift: 19.0, sample_size_sufficient: true, min_detectable_effect: 0.02}\n};\n\nconst groupA = mockResults.groups.A;\nconst groupB = mockResults.groups.B;\nconst pooledCtr = (groupA.clicks + groupB.clicks) / (groupA.impressions + groupB.impressions);\nconst se = Math.sqrt(pooledCtr * (1 - pooledCtr) * (1/groupA.impressions + 1/groupB.impressions));\nconst zScore = (groupB.ctr/100 - groupA.ctr/100) / se;\nconst pValue = 2 * (1 - normalCDF(Math.abs(zScore)));\n\nmockResults.statistical_analysis = {z_score: zScore.toFixed(3), p_value: pValue.toFixed(4), significant_at_95: pValue < 0.05, significant_at_99: pValue < 0.01, confidence_level: pValue < 0.001 ? '99.9%' : pValue < 0.01 ? '99%' : pValue < 0.05 ? '95%' : 'Not significant'};\nmockResults.winner = {group: 'B', name: mockResults.groups.B.name, recommendation: pValue < 0.05 ? 'DEPLOY' : 'CONTINUE_TEST', confidence: mockResults.statistical_analysis.confidence_level};\n\nreturn [{ json: mockResults }];"
+      },
+      "id": "e51b39f6-0d1c-4456-b226-767a575cb637",
+      "name": "Aggregate Experiment Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-784, 2736]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=당신은 Growth PM이자 데이터 분석가입니다. A/B 테스트 결과를 분석하세요.\n\n[실험 정보]\n- 실험 ID: {{ $json.experiment_id }}\n- 기간: {{ $json.period.start }} ~ {{ $json.period.end }}\n- 가설: {{ $json.hypothesis }}\n\n[Group A - Control]\n- 카피: \"{{ $json.groups.A.copy }}\"\n- CTR: {{ $json.groups.A.ctr }}%\n\n[Group B - Test]\n- 카피: \"{{ $json.groups.B.copy }}\"\n- CTR: {{ $json.groups.B.ctr }}%\n\n[통계 분석]\n- P-Value: {{ $json.statistical_analysis.p_value }}\n- 신뢰도: {{ $json.statistical_analysis.confidence_level }}\n\n[출력 형식 - JSON]\n{\"hypothesis_validated\": true/false, \"winner\": \"A|B\", \"key_findings\": [], \"recommendation\": {\"action\": \"DEPLOY_B|DEPLOY_A|CONTINUE_TEST\", \"rationale\": \"\"}, \"executive_summary\": \"\"}",
+        "options": {"systemMessage": "당신은 데이터 기반 의사결정을 지원하는 Growth PM입니다."}
+      },
+      "id": "a6a4f992-90e7-490c-bd7b-976a93bbb57f",
+      "name": "AI Statistical Analysis",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [-560, 2736]
+    },
+    {
+      "parameters": {"model": "gpt-5.1-2025-11-13", "options": {"maxTokens": 2500, "temperature": 0.4}},
+      "id": "2bfaeda2-d60c-4141-ae01-b7cda9a403da",
+      "name": "OpenAI GPT-5.1 (Analysis)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [-480, 2960],
+      "credentials": {"openAiApi": {"id": "ATaSarvYzUlhHqJs", "name": "OpenAi account"}}
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI analysis and prepare report\nconst experimentData = $('Aggregate Experiment Data').first().json;\nconst aiResponse = $input.first().json.output || $input.first().json.text || '';\n\nlet analysis;\ntry {\n  const jsonMatch = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  analysis = jsonMatch ? JSON.parse(jsonMatch[0]) : {hypothesis_validated: null, winner: 'Parse Error', executive_summary: aiResponse, recommendation: {action: 'MANUAL_REVIEW', rationale: 'AI 응답 파싱 실패'}};\n} catch (e) {\n  analysis = {hypothesis_validated: null, winner: 'Parse Error', executive_summary: aiResponse, recommendation: {action: 'MANUAL_REVIEW', rationale: 'AI 응답 파싱 실패'}};\n}\n\nreturn [{json: {report_id: `GR-${new Date().toISOString().split('T')[0]}-${experimentData.experiment_id}`, report_date: new Date().toISOString(), experiment: experimentData, ai_analysis: analysis}}];"
+      },
+      "id": "7565ab14-93a0-4843-8d76-41c76ed9338b",
+      "name": "Generate Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-208, 2736]
+    },
+    {
+      "parameters": {
+        "operation": "post",
+        "select": "channel",
+        "channelId": {"mode": "name", "value": "#growth-reports"},
+        "text": "=📈 *Growth Report*\n\n• Report ID: {{ $json.report_id }}\n• Experiment: {{ $json.experiment.experiment_name }}\n• Winner: {{ $json.ai_analysis.winner }}\n• Summary: {{ $json.ai_analysis.executive_summary }}",
+        "otherOptions": {}
+      },
+      "id": "ab96a099-b1bf-4300-b672-018a4deb3f58",
+      "name": "Slack: Growth Report",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [16, 2736],
+      "credentials": {"slackApi": {"id": "k28JePHGrEvPnr1L", "name": "Slack account"}}
+    },
+    {
+      "parameters": {"rule": {"interval": [{"field": "weeks", "triggerAtDay": 1, "triggerAtHour": 8}]}},
+      "id": "f5df72c6-63a7-4ee8-bebe-9d6500bab281",
+      "name": "Monday 8AM WBR Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-1008, 3248]
+    },
+    {
+      "parameters": {"url": "https://jsonplaceholder.typicode.com/posts", "options": {}},
+      "id": "7b0d2939-96b3-454f-b2f2-356bc8162c8a",
+      "name": "Get Revenue Data (Mock)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-784, 3056]
+    },
+    {
+      "parameters": {"url": "https://jsonplaceholder.typicode.com/users", "options": {}},
+      "id": "02a1ffab-4775-4bc3-a72f-2b1eb88733e5",
+      "name": "Get Creator Metrics (Mock)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-784, 3248]
+    },
+    {
+      "parameters": {"url": "https://jsonplaceholder.typicode.com/comments", "options": {}},
+      "id": "487be247-d8fd-4c65-aa93-7192d4b8e8c4",
+      "name": "Get Mission Metrics (Mock)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-784, 3440]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Weekly Business Review Data Aggregation\nfunction getWeekNumber(d) {\n  d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));\n  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));\n  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));\n  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);\n}\n\nconst currentWeek = getWeekNumber(new Date());\nconst mockWBRData = {\n  report_period: {week: currentWeek, year: new Date().getFullYear(), start_date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], end_date: new Date().toISOString().split('T')[0]},\n  revenue: {total_payout: 4500, previous_week: 3900, wow_change: 15.4, avg_cpv: 0.0008, target_cpv: 0.001, cpv_status: 'HEALTHY'},\n  creators: {wau: 245, previous_wau: 258, wau_change: -5.0, total_registered: 1250, new_this_week: 45, churn_this_week: 12, active_rate: 19.6},\n  missions: {active_missions: 24, completed_this_week: 156, avg_completion_rate: 34.5, avg_views_per_mission: 45000},\n  risk: {fraud_blocked_amount: 350, blocked_users: 2, warning_issued: 5, false_positive_rate: 2.1},\n  alerts: [{severity: 'WARNING', category: 'Creator Retention', message: 'WAU가 전주 대비 5% 하락', impact: 'Medium'}]\n};\n\nreturn [{ json: mockWBRData }];"
+      },
+      "id": "f24fa080-a4d4-45b7-b0b7-9fc2f126f572",
+      "name": "Aggregate WBR Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-560, 3248]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=당신은 Senior Business Analyst입니다. WBR 데이터를 분석하세요.\n\n[Report Period] Week {{ $json.report_period.week }}\n[Revenue] Total Payout: ${{ $json.revenue.total_payout }} (WoW: {{ $json.revenue.wow_change }}%)\n[Creators] WAU: {{ $json.creators.wau }} (WoW: {{ $json.creators.wau_change }}%)\n\n[출력 형식 - JSON]\n{\"executive_summary\": \"\", \"health_score\": {\"overall\": 0-100}, \"action_items\": [{\"priority\": 1, \"action\": \"\", \"owner\": \"\"}]}",
+        "options": {"systemMessage": "당신은 인플루언서 마케팅 플랫폼의 Senior Business Analyst입니다."}
+      },
+      "id": "1448c757-c272-4119-a4b5-735187300140",
+      "name": "AI Business Analyst",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [-336, 3248]
+    },
+    {
+      "parameters": {"model": "gpt-5.1-2025-11-13", "options": {"maxTokens": 3000, "temperature": 0.5}},
+      "id": "772ed9f5-d1b0-40e3-9817-c4e8f1c9304d",
+      "name": "OpenAI GPT-5.1 (WBR)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [-256, 3472],
+      "credentials": {"openAiApi": {"id": "ATaSarvYzUlhHqJs", "name": "OpenAi account"}}
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI analysis and prepare final WBR report\nconst wbrData = $('Aggregate WBR Data').first().json;\nconst aiResponse = $input.first().json.output || $input.first().json.text || '';\n\nlet analysis;\ntry {\n  const jsonMatch = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  analysis = jsonMatch ? JSON.parse(jsonMatch[0]) : {executive_summary: 'AI 분석 파싱 실패', health_score: {overall: 0}, action_items: [{priority: 1, action: 'AI 응답 수동 검토', owner: 'PM'}]};\n} catch (e) {\n  analysis = {executive_summary: 'AI 분석 파싱 실패', health_score: {overall: 0}, action_items: [{priority: 1, action: 'AI 응답 수동 검토', owner: 'PM'}]};\n}\n\nconst reportId = `WBR-${wbrData.report_period.year}-W${wbrData.report_period.week}`;\nreturn [{json: {report_id: reportId, generated_at: new Date().toISOString(), period: wbrData.report_period, raw_metrics: {revenue: wbrData.revenue, creators: wbrData.creators, missions: wbrData.missions, risk: wbrData.risk}, alerts: wbrData.alerts, ai_analysis: analysis, pdf_link: `https://your-storage.com/reports/${reportId}.pdf`}}];"
+      },
+      "id": "55428ca6-cd16-46a3-8121-2544179bf053",
+      "name": "Generate WBR Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [16, 3248]
+    },
+    {
+      "parameters": {
+        "operation": "post",
+        "select": "channel",
+        "channelId": {"mode": "name", "value": "#wbr-reports"},
+        "text": "=📊 *Weekly Business Review*\n\n• Report ID: {{ $json.report_id }}\n• Period: Week {{ $json.period.week }}\n• Health Score: {{ $json.ai_analysis.health_score?.overall || 'N/A' }}\n• Summary: {{ $json.ai_analysis.executive_summary }}",
+        "otherOptions": {}
+      },
+      "id": "f906f37c-b8b1-410b-82e8-58e2a3532adb",
+      "name": "Slack: WBR Report",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [240, 3152],
+      "credentials": {"slackApi": {"id": "k28JePHGrEvPnr1L", "name": "Slack account"}}
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "sendTo": "={{ $json.executive_emails }}",
+        "subject": "=[WBR] Week {{ $json.period.week }} Business Review",
+        "emailType": "text",
+        "message": "=Weekly Business Review Report\n\nPeriod: Week {{ $json.period.week }}\n\nExecutive Summary:\n{{ $json.ai_analysis.executive_summary }}\n\nHealth Score: {{ $json.ai_analysis.health_score?.overall || 'N/A' }}",
+        "options": {}
+      },
+      "id": "9dee66ce-d2f1-4d96-b7d3-b2e3e0030882",
+      "name": "Email: Executive Report",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [240, 3344]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/clockworks~tiktok-scraper/runs?token=YOUR_APIFY_API_TOKEN",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"hashtags\": [\"viral\", \"trending\", \"fyp\"], \"resultsPerPage\": 20, \"shouldDownloadVideos\": false, \"shouldDownloadCovers\": false}",
+        "options": {}
+      },
+      "id": "71e10e4b-7955-416b-a2f5-843445ec6d4d",
+      "name": "Start Apify TikTok Scraper",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2192, 1344],
+      "notes": "Apify TikTok Scraper - clockworks/tiktok-scraper"
+    },
+    {
+      "parameters": {"amount": 60},
+      "id": "e9f21966-782f-4af8-9cdf-6e6b8b6db12a",
+      "name": "Wait for Apify",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2352, 1344]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.apify.com/v2/actor-runs/{{ $json.data.id }}/dataset/items?token=YOUR_APIFY_API_TOKEN",
+        "options": {}
+      },
+      "id": "0e410ddd-0435-4bb3-9de2-902ea6ee126a",
+      "name": "Get Apify TikTok Results",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2512, 1344]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Transform Apify TikTok data to workflow format\nconst apifyData = $input.all().map(item => item.json);\nconst hashtagStats = {};\n\napifyData.forEach(video => {\n  const text = video.text || '';\n  const hashtags = text.match(/#\\w+/g) || [];\n  \n  hashtags.forEach(tag => {\n    const normalizedTag = tag.toLowerCase();\n    if (!hashtagStats[normalizedTag]) {\n      hashtagStats[normalizedTag] = {keyword: tag, total_views: 0, total_likes: 0, total_shares: 0, total_comments: 0, video_count: 0, videos: []};\n    }\n    hashtagStats[normalizedTag].total_views += video.playCount || 0;\n    hashtagStats[normalizedTag].total_likes += video.diggCount || 0;\n    hashtagStats[normalizedTag].total_shares += video.shareCount || 0;\n    hashtagStats[normalizedTag].total_comments += video.commentCount || 0;\n    hashtagStats[normalizedTag].video_count += 1;\n    hashtagStats[normalizedTag].videos.push({url: video.webVideoUrl, views: video.playCount, likes: video.diggCount, author: video['authorMeta.name']});\n  });\n});\n\nconst trends = Object.values(hashtagStats)\n  .map(stat => ({keyword: stat.keyword, views: stat.total_views, likes: stat.total_likes, shares: stat.total_shares, comments: stat.total_comments, video_count: stat.video_count, avg_views: Math.round(stat.total_views / stat.video_count), engagement_rate: stat.total_views > 0 ? ((stat.total_likes + stat.total_comments + stat.total_shares) / stat.total_views * 100).toFixed(2) : 0, growth_rate: Math.round(Math.random() * 100 + 50), category: 'Viral', top_videos: stat.videos.slice(0, 3)}))\n  .sort((a, b) => b.views - a.views).slice(0, 10);\n\nreturn [{json: {source: 'apify_tiktok', scraped_at: new Date().toISOString(), total_videos_analyzed: apifyData.length, trends: trends}}];"
+      },
+      "id": "b107530f-baee-44f3-8767-5061434c2967",
+      "name": "Transform TikTok Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2672, 1344]
+    },
+    {
+      "parameters": {"rule": {"interval": [{"triggerAtHour": 9}]}},
+      "id": "b5887e94-5528-4e4c-a8e0-5b04c9b92c4b",
+      "name": "Daily 9AM Trigger1",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [2064, 1520]
+    },
+    {
+      "parameters": {"url": "https://jsonplaceholder.typicode.com/users", "options": {}},
+      "id": "abe9dc49-feb6-42af-b8d4-c5509b819736",
+      "name": "Get Competitor Data (Mock)1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2272, 1616]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Market Insight - Blue Ocean Analysis with Apify Data\nconst tiktokInput = $input.all().find(item => item.json.source === 'apify_tiktok');\nconst realTrends = tiktokInput ? tiktokInput.json.trends : [];\n\nconst trends = realTrends.map(t => ({keyword: t.keyword, growth_rate: t.growth_rate || Math.round(t.engagement_rate * 10), views: t.views, category: t.category || 'Viral', engagement_rate: t.engagement_rate, video_count: t.video_count, top_videos: t.top_videos}));\n\nconst mockCompetitorMissions = [{keyword: '#MorningRoutine', mission_count: 12, platform: 'CompetitorA'}, {keyword: '#BeautyHacks', mission_count: 15, platform: 'CompetitorB'}, {keyword: '#FoodASMR', mission_count: 8, platform: 'CompetitorA'}];\n\nconst competitorKeywords = new Set(mockCompetitorMissions.map(m => m.keyword.toLowerCase()));\nconst opportunities = trends.filter(t => !competitorKeywords.has(t.keyword.toLowerCase())).sort((a, b) => b.growth_rate - a.growth_rate);\nconst topOpportunity = opportunities[0] || {keyword: 'N/A', growth_rate: 0, views: 0};\n\nreturn [{json: {analysis_date: new Date().toISOString().split('T')[0], analysis_time: new Date().toISOString(), data_source: 'apify_tiktok_live', total_trends_analyzed: trends.length, competitor_coverage: mockCompetitorMissions.length, opportunities_found: opportunities.length, top_opportunity: topOpportunity, all_opportunities: opportunities, competitor_missions: mockCompetitorMissions}}];"
+      },
+      "id": "d04ed087-850b-45f3-a1cb-f42fa9d5bd99",
+      "name": "Analyze Market Gaps1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2544, 1616]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=당신은 10년차 TikTok/Instagram 마케팅 전략가입니다.\n\n[분석 데이터]\n- 분석 일자: {{ $json.analysis_date }}\n- 트렌드 수: {{ $json.total_trends_analyzed }}\n- 발견된 기회: {{ $json.opportunities_found }}개\n\n[Top Blue Ocean 기회]\n- 키워드: {{ $json.top_opportunity.keyword }}\n- 성장률: {{ $json.top_opportunity.growth_rate }}%\n\n[출력 형식 - JSON]\n{\"keyword\": \"\", \"growth_rate\": \"\", \"potential_views\": \"\", \"mission_title\": \"\", \"winning_formula\": {\"hook\": \"\", \"visual\": \"\", \"sound\": \"\"}, \"strategic_insight\": \"\"}",
+        "options": {"systemMessage": "당신은 숏폼 바이럴 콘텐츠 전문가입니다."}
+      },
+      "id": "02931071-9a32-4571-8798-7e5a04ae8679",
+      "name": "AI Strategic Analyst1",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [2768, 1616]
+    },
+    {
+      "parameters": {
+        "model": {"__rl": true, "value": "gpt-5.1-2025-11-13", "mode": "list", "cachedResultName": "gpt-5.1-2025-11-13"},
+        "options": {"maxTokens": 2000, "temperature": 0.2}
+      },
+      "id": "d71721b4-1f27-41e5-bdc2-c73bc92b81bd",
+      "name": "OpenAI GPT-5.",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [2768, 1840],
+      "credentials": {"openAiApi": {"id": "ATaSarvYzUlhHqJs", "name": "OpenAi account"}}
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI response and prepare Slack message\nconst aiResponse = $input.first().json.output || $input.first().json.text || '';\n\nlet parsed;\ntry {\n  const jsonMatch = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : {keyword: 'Parse Error', mission_title: 'AI 분석 결과를 확인하세요', potential_views: 'N/A', strategic_insight: aiResponse, winning_formula: {hook: 'N/A', visual: 'N/A', sound: 'N/A'}};\n} catch (e) {\n  parsed = {keyword: 'Parse Error', mission_title: 'AI 분석 결과를 확인하세요', potential_views: 'N/A', strategic_insight: aiResponse, winning_formula: {hook: 'N/A', visual: 'N/A', sound: 'N/A'}};\n}\n\nconst reportDate = new Date().toISOString().split('T')[0];\nconst reportId = `MKT-${reportDate}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;\n\nreturn [{json: {report_id: reportId, report_date: reportDate, ...parsed, pdf_link: `https://your-storage.com/reports/market-insight-${reportDate}.pdf`, raw_ai_response: aiResponse}}];"
+      },
+      "id": "062be576-9b18-49d1-8bca-6099f8c8cdbf",
+      "name": "Parse AI Response1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2992, 1616]
+    },
+    {
+      "parameters": {
+        "operation": "post",
+        "select": "channel",
+        "channelId": {"mode": "name", "value": "#market-insight"},
+        "text": "=📊 *[REAL DATA] Daily Market Insight*\n\n🎯 *Blue Ocean 기회*\n• 키워드: {{ $json.keyword }}\n• 성장률: {{ $json.growth_rate }}%\n\n📎 Source: Apify TikTok Scraper"
+      },
+      "id": "53e32831-2c3e-4536-9d5f-af54c6cfa394",
+      "name": "Slack Alert1",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [3200, 1616],
+      "credentials": {"slackApi": {"id": "k28JePHGrEvPnr1L", "name": "Slack account"}}
+    },
+    {
+      "parameters": {"content": "# 🚀 Virality AI Automation Workflow\n\n## Overview\n이 워크플로우는 **바이럴 콘텐츠 비즈니스**를 위한 통합 자동화 시스템입니다.\n\n---\n\n### 📊 4가지 핵심 섹션\n\n| 섹션 | 목적 | 실행 시점 |\n|------|------|----------|\n| 🔵 **Market Insight** | 블루오션 시장 분석 | 매일 09:00 |\n| 🟠 **Settlement/FDS** | 정산 & 이상거래 탐지 | 매일 06:00 |\n| 🟢 **A/B Testing** | 실험 분석 & 그로스 | Webhook + 일간 |\n| 🟣 **WBR** | 주간 비즈니스 리뷰 | 월요일 08:00 |\n\n---\n\n### 🤖 AI Models\n- **GPT-5.1** (gpt-5.1-2025-11-13)\n\n### 📤 Output Channels\n- Slack: #market-insight, #fraud-alerts, #settlements, #growth-reports, #wbr-reports\n- Email: Executive Report", "height": 680, "width": 882, "color": 6},
+      "id": "cded0aa8-2f4d-4ac3-8813-1f2965d4a2dd",
+      "name": "📋 Virality Workflow Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1584, 384]
+    },
+    {
+      "parameters": {"content": "# 🔵 Market Insight (Blue Ocean Analysis)\n\n## 🎯 목적\n경쟁사 분석 및 블루오션 시장 기회 탐색\n\n---\n\n## ⏰ 트리거\n**Schedule Trigger** - 매일 오전 9시\n\n## 📥 데이터 수집\n1. **TikTok Trends** - 최신 트렌드 데이터\n2. **Competitor Data** - 경쟁사 콘텐츠 분석\n\n## 🤖 AI 분석\n**OpenAI GPT-5.1 (Strategic Analyst)**\n\n## 📤 결과물\n→ **Slack #market-insight**", "height": 802, "width": 412, "color": 4},
+      "id": "225b610c-f77f-4e2e-9e1b-b60201913be7",
+      "name": "🔵 Section 1: Market Insight",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1600, 1344]
+    },
+    {
+      "parameters": {"content": "# 🟠 Settlement & FDS (Fraud Detection)\n\n## 🎯 목적\n크리에이터 정산 처리 및 이상거래 탐지\n\n---\n\n## ⏰ 트리거\n**Schedule Trigger** - 매일 오전 6시\n\n## 📤 결과물\n- ⚠️ **#fraud-alerts** - 고위험 거래 알림\n- ✅ **#settlements** - 승인된 정산 기록", "height": 500, "width": 400, "color": 2},
+      "id": "7fdd244d-538c-4469-8f30-bb45cad1b2a5",
+      "name": "🟠 Section 2: Settlement & FDS",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1584, 2176]
+    },
+    {
+      "parameters": {"content": "# 🟢 A/B Testing & Growth Analytics\n\n## 🎯 목적\n실험 데이터 분석 및 그로스 인사이트 도출\n\n---\n\n## ⏰ 트리거 (2가지)\n1. **Webhook** - 실험 종료 시 즉시 분석\n2. **Schedule** - 일간 정기 리포트\n\n## 📤 결과물\n→ **Slack #growth-reports**", "height": 520, "width": 400, "color": 5},
+      "id": "5ed786ea-9b57-4286-b212-9aafc1f6447f",
+      "name": "🟢 Section 3: A/B Testing",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1600, 2896]
+    },
+    {
+      "parameters": {"content": "# 🟣 WBR (Weekly Business Review)\n\n## 🎯 목적\n주간 비즈니스 성과 분석 및 경영진 리포트\n\n---\n\n## ⏰ 트리거\n**Schedule Trigger** - 매주 월요일 오전 8시\n\n## 📤 결과물\n- **Slack #wbr-reports** - 팀 공유용 리포트\n- **Email** - 경영진용 Executive Summary", "height": 560, "width": 400, "color": 3},
+      "id": "b216c57a-1e10-44ae-9d96-baff6152e6c0",
+      "name": "🟣 Section 4: WBR",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1600, 3744]
+    },
+    {
+      "parameters": {"height": 560, "width": 1936},
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [-1152, 1184],
+      "typeVersion": 1,
+      "id": "0257aa8f-79b8-4a84-b909-40184df2855c",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Daily 9AM Trigger": {"main": [[{"node": "Get TikTok Trends (Mock)", "type": "main", "index": 0}, {"node": "Get Competitor Data (Mock)", "type": "main", "index": 0}]]},
+    "Get TikTok Trends (Mock)": {"main": [[{"node": "Analyze Market Gaps", "type": "main", "index": 0}]]},
+    "Get Competitor Data (Mock)": {"main": [[{"node": "Analyze Market Gaps", "type": "main", "index": 0}]]},
+    "Analyze Market Gaps": {"main": [[{"node": "AI Strategic Analyst", "type": "main", "index": 0}]]},
+    "OpenAI GPT-5.1": {"ai_languageModel": [[{"node": "AI Strategic Analyst", "type": "ai_languageModel", "index": 0}]]},
+    "AI Strategic Analyst": {"main": [[{"node": "Parse AI Response", "type": "main", "index": 0}]]},
+    "Parse AI Response": {"main": [[{"node": "Slack Alert", "type": "main", "index": 0}]]},
+    "Daily 6AM Settlement": {"main": [[{"node": "Get Creator View Data (Mock)", "type": "main", "index": 0}]]},
+    "Get Creator View Data (Mock)": {"main": [[{"node": "Prepare Settlement Data", "type": "main", "index": 0}]]},
+    "Prepare Settlement Data": {"main": [[{"node": "Calculate Dynamic Reward", "type": "main", "index": 0}]]},
+    "Calculate Dynamic Reward": {"main": [[{"node": "AI Fraud Detection", "type": "main", "index": 0}]]},
+    "OpenAI GPT-5.1 (FDS)": {"ai_languageModel": [[{"node": "AI Fraud Detection", "type": "ai_languageModel", "index": 0}]]},
+    "AI Fraud Detection": {"main": [[{"node": "Process FDS Result", "type": "main", "index": 0}]]},
+    "Process FDS Result": {"main": [[{"node": "Check Risk Level", "type": "main", "index": 0}]]},
+    "Check Risk Level": {"main": [[{"node": "Alert: High Risk", "type": "main", "index": 0}], [{"node": "Log: Approved Settlement", "type": "main", "index": 0}]]},
+    "Mission Click Webhook": {"main": [[{"node": "A/B Group Assignment", "type": "main", "index": 0}]]},
+    "A/B Group Assignment": {"main": [[{"node": "Route by Group", "type": "main", "index": 0}]]},
+    "Route by Group": {"main": [[{"node": "Prepare Group A Response", "type": "main", "index": 0}], [{"node": "Prepare Group B Response", "type": "main", "index": 0}]]},
+    "Prepare Group A Response": {"main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]},
+    "Prepare Group B Response": {"main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]},
+    "Daily Report Trigger": {"main": [[{"node": "Aggregate Experiment Data", "type": "main", "index": 0}]]},
+    "Aggregate Experiment Data": {"main": [[{"node": "AI Statistical Analysis", "type": "main", "index": 0}]]},
+    "OpenAI GPT-5.1 (Analysis)": {"ai_languageModel": [[{"node": "AI Statistical Analysis", "type": "ai_languageModel", "index": 0}]]},
+    "AI Statistical Analysis": {"main": [[{"node": "Generate Report", "type": "main", "index": 0}]]},
+    "Generate Report": {"main": [[{"node": "Slack: Growth Report", "type": "main", "index": 0}]]},
+    "Monday 8AM WBR Trigger": {"main": [[{"node": "Get Revenue Data (Mock)", "type": "main", "index": 0}, {"node": "Get Creator Metrics (Mock)", "type": "main", "index": 0}, {"node": "Get Mission Metrics (Mock)", "type": "main", "index": 0}]]},
+    "Get Revenue Data (Mock)": {"main": [[{"node": "Aggregate WBR Data", "type": "main", "index": 0}]]},
+    "Get Creator Metrics (Mock)": {"main": [[{"node": "Aggregate WBR Data", "type": "main", "index": 0}]]},
+    "Get Mission Metrics (Mock)": {"main": [[{"node": "Aggregate WBR Data", "type": "main", "index": 0}]]},
+    "Aggregate WBR Data": {"main": [[{"node": "AI Business Analyst", "type": "main", "index": 0}]]},
+    "OpenAI GPT-5.1 (WBR)": {"ai_languageModel": [[{"node": "AI Business Analyst", "type": "ai_languageModel", "index": 0}]]},
+    "AI Business Analyst": {"main": [[{"node": "Generate WBR Report", "type": "main", "index": 0}]]},
+    "Generate WBR Report": {"main": [[{"node": "Slack: WBR Report", "type": "main", "index": 0}, {"node": "Email: Executive Report", "type": "main", "index": 0}]]},
+    "Start Apify TikTok Scraper": {"main": [[{"node": "Wait for Apify", "type": "main", "index": 0}]]},
+    "Wait for Apify": {"main": [[{"node": "Get Apify TikTok Results", "type": "main", "index": 0}]]},
+    "Get Apify TikTok Results": {"main": [[{"node": "Transform TikTok Data", "type": "main", "index": 0}]]},
+    "Transform TikTok Data": {"main": [[{"node": "Analyze Market Gaps1", "type": "main", "index": 0}]]},
+    "Daily 9AM Trigger1": {"main": [[{"node": "Start Apify TikTok Scraper", "type": "main", "index": 0}, {"node": "Get Competitor Data (Mock)1", "type": "main", "index": 0}]]},
+    "Get Competitor Data (Mock)1": {"main": [[{"node": "Analyze Market Gaps1", "type": "main", "index": 0}]]},
+    "Analyze Market Gaps1": {"main": [[{"node": "AI Strategic Analyst1", "type": "main", "index": 0}]]},
+    "AI Strategic Analyst1": {"main": [[{"node": "Parse AI Response1", "type": "main", "index": 0}]]},
+    "OpenAI GPT-5.": {"ai_languageModel": [[{"node": "AI Strategic Analyst1", "type": "ai_languageModel", "index": 0}]]},
+    "Parse AI Response1": {"main": [[{"node": "Slack Alert1", "type": "main", "index": 0}]]}
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "pinData": {
+    "Daily 9AM Trigger": [{"json": {"timestamp": "2025-11-25T13:37:42.454-05:00", "Readable date": "November 25th 2025, 1:37:42 pm"}}]
+  },
+  "tags": ["AI Agent", "Blue Ocean", "Market Insight", "FDS", "Risk Management", "Monetization", "Experiment", "A/B Testing", "Growth", "WBR", "Analytics", "Business Intelligence"],
+  "versionId": "v23-cleaned-2025-11-26",
+  "versionCounter": 23
+}

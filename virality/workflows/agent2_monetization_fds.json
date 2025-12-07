@@ -1,0 +1,219 @@
+{
+  "name": "Agent 2 - Monetization & Risk (FDS)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      },
+      "id": "schedule-daily",
+      "name": "Daily 6AM Settlement",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://jsonplaceholder.typicode.com/posts",
+        "options": {}
+      },
+      "id": "http-viewdata",
+      "name": "Get Creator View Data (Mock)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 300],
+      "notes": "Replace with actual database/API for view counts"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Mock creator performance data for reward calculation\nconst mockCreators = [\n  {\n    creator_id: 'creator_001',\n    username: '@sarah_lifestyle',\n    grade: 'S',\n    mission_id: 'MSN_001',\n    views: 125000,\n    likes: 8500,\n    comments: 420,\n    avg_watch_time: 12.5,\n    view_history: [5000, 8000, 15000, 35000, 62000], // hourly progression\n    peak_hour: 14,\n    category: 'Lifestyle'\n  },\n  {\n    creator_id: 'creator_002',\n    username: '@tech_mike',\n    grade: 'A',\n    mission_id: 'MSN_002',\n    views: 85000,\n    likes: 4200,\n    comments: 180,\n    avg_watch_time: 8.2,\n    view_history: [2000, 5000, 12000, 28000, 38000],\n    peak_hour: 20,\n    category: 'Tech'\n  },\n  {\n    creator_id: 'creator_003',\n    username: '@suspicious_user',\n    grade: 'B',\n    mission_id: 'MSN_003',\n    views: 95000,\n    likes: 150,\n    comments: 45,\n    avg_watch_time: 2.1,\n    view_history: [100, 200, 500, 94200], // suspicious spike at 3AM\n    peak_hour: 3,\n    category: 'Gaming'\n  },\n  {\n    creator_id: 'creator_004',\n    username: '@food_jenny',\n    grade: 'A',\n    mission_id: 'MSN_004',\n    views: 67000,\n    likes: 5100,\n    comments: 890,\n    avg_watch_time: 15.3,\n    view_history: [3000, 8000, 18000, 25000, 13000],\n    peak_hour: 12,\n    category: 'Food'\n  }\n];\n\n// Season/Event multiplier (e.g., Black Friday, Holiday)\nconst isPeakSeason = new Date().getMonth() === 10; // November\n\nreturn mockCreators.map(creator => ({\n  json: {\n    ...creator,\n    is_peak_season: isPeakSeason,\n    settlement_date: new Date().toISOString().split('T')[0],\n    engagement_rate: ((creator.likes + creator.comments) / creator.views * 100).toFixed(2)\n  }\n}));"
+      },
+      "id": "code-prepare",
+      "name": "Prepare Settlement Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Dynamic Reward Calculation Logic\nconst item = $input.item.json;\n\n// Base rate: $0.5 per 1K views\nconst baseRate = 0.5;\n\n// Grade multipliers\nconst gradeMultiplier = {\n  'S': 1.5,\n  'A': 1.2,\n  'B': 1.0,\n  'C': 0.8\n};\n\n// Category bonuses\nconst categoryBonus = {\n  'Lifestyle': 1.1,\n  'Tech': 1.15,\n  'Food': 1.05,\n  'Gaming': 1.0,\n  'Beauty': 1.2\n};\n\n// Season multiplier\nconst seasonMultiplier = item.is_peak_season ? 1.3 : 1.0;\n\n// Calculate base reward\nlet baseReward = (item.views / 1000) * baseRate;\n\n// Apply multipliers\nlet finalReward = baseReward \n  * (gradeMultiplier[item.grade] || 1.0)\n  * (categoryBonus[item.category] || 1.0)\n  * seasonMultiplier;\n\n// Apply cap ($500 max per mission)\nconst maxReward = 500;\nif (finalReward > maxReward) {\n  finalReward = maxReward;\n}\n\n// Round to 2 decimal places\nfinalReward = Math.round(finalReward * 100) / 100;\n\nreturn {\n  json: {\n    ...item,\n    reward_calculation: {\n      base_rate: baseRate,\n      grade_multiplier: gradeMultiplier[item.grade] || 1.0,\n      category_bonus: categoryBonus[item.category] || 1.0,\n      season_multiplier: seasonMultiplier,\n      base_reward: baseReward.toFixed(2),\n      final_reward: finalReward,\n      capped: finalReward >= maxReward\n    }\n  }\n};"
+      },
+      "id": "code-reward",
+      "name": "Calculate Dynamic Reward",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=당신은 플랫폼 보안 전문가입니다. 크리에이터의 조회수 패턴을 분석하여 어뷰징(Abusing) 확률을 평가하세요.\n\n[크리에이터 데이터]\n- Username: {{ $json.username }}\n- 총 조회수: {{ $json.views }}\n- 좋아요: {{ $json.likes }}\n- 댓글: {{ $json.comments }}\n- 평균 시청 시간: {{ $json.avg_watch_time }}초\n- 조회수 추이 (시간별): {{ JSON.stringify($json.view_history) }}\n- 피크 시간대: {{ $json.peak_hour }}시\n- 참여율: {{ $json.engagement_rate }}%\n\n[어뷰징 탐지 기준]\n1. 새벽 시간대(02:00-05:00)에 급격한 수직 상승이 있는가? (봇 의심)\n2. 좋아요/댓글 비율이 조회수 대비 비정상적으로 낮은가? (< 1%)\n3. 평균 시청 시간이 3초 미만인가? (클릭팜 의심)\n4. 조회수 급등이 자연스러운 곡선이 아닌 계단식인가?\n\n[출력 형식 - 반드시 JSON]\n{\n  \"risk_score\": 0-100 사이의 정수,\n  \"risk_level\": \"LOW\" | \"MEDIUM\" | \"HIGH\" | \"CRITICAL\",\n  \"detected_patterns\": [\"탐지된 의심 패턴 목록\"],\n  \"recommendation\": \"APPROVE\" | \"REVIEW\" | \"HOLD\" | \"REJECT\",\n  \"reason\": \"판단 근거 상세 설명\",\n  \"confidence\": 0-100 사이의 신뢰도\n}",
+        "options": {
+          "systemMessage": "당신은 인플루언서 마케팅 플랫폼의 Fraud Detection System(FDS) 전문가입니다.\n\n핵심 원칙:\n1. 정상적인 바이럴과 인위적인 어뷰징을 구분합니다.\n2. False Positive를 최소화하면서도 어뷰징은 반드시 탐지합니다.\n3. 모든 응답은 JSON 형식으로 출력합니다.\n4. risk_score가 70 이상이면 HIGH, 85 이상이면 CRITICAL로 분류합니다."
+        }
+      },
+      "id": "ai-fds",
+      "name": "AI Fraud Detection",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [880, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4-turbo",
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 1500
+        }
+      },
+      "id": "openai-fds",
+      "name": "OpenAI GPT-4 (FDS)",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [880, 520]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Parse FDS AI response\nconst item = $input.item.json;\nconst aiResponse = item.output || item.text || '';\n\nlet fdsResult;\ntry {\n  const jsonMatch = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    fdsResult = JSON.parse(jsonMatch[0]);\n  } else {\n    throw new Error('No JSON found');\n  }\n} catch (e) {\n  fdsResult = {\n    risk_score: 50,\n    risk_level: 'MEDIUM',\n    detected_patterns: ['Parse error - manual review required'],\n    recommendation: 'REVIEW',\n    reason: 'AI 응답 파싱 실패',\n    confidence: 0\n  };\n}\n\n// Determine final action\nlet settlement_status;\nlet settlement_action;\n\nif (fdsResult.risk_score >= 85) {\n  settlement_status = 'BLOCKED';\n  settlement_action = 'Account flagged for investigation';\n} else if (fdsResult.risk_score >= 70) {\n  settlement_status = 'HOLD';\n  settlement_action = 'Payment held pending review';\n} else if (fdsResult.risk_score >= 50) {\n  settlement_status = 'REVIEW';\n  settlement_action = 'Manual verification required';\n} else {\n  settlement_status = 'APPROVED';\n  settlement_action = 'Auto-approved for payment';\n}\n\nreturn {\n  json: {\n    creator_id: item.creator_id,\n    username: item.username,\n    views: item.views,\n    reward: item.reward_calculation?.final_reward || 0,\n    fds_result: fdsResult,\n    settlement_status: settlement_status,\n    settlement_action: settlement_action,\n    settlement_date: new Date().toISOString().split('T')[0],\n    transaction_id: `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`\n  }\n};"
+      },
+      "id": "code-fds-parse",
+      "name": "Process FDS Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-high-risk",
+              "leftValue": "={{ $json.fds_result.risk_score }}",
+              "rightValue": 70,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-risk",
+      "name": "Check Risk Level",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1320, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "channel": {
+          "__rl": true,
+          "mode": "name",
+          "value": "#risk-alerts"
+        },
+        "text": "=🚨 *[FRAUD ALERT - High Risk Detected]*\n━━━━━━━━━━━━━━━━━━━━━━\n\n👤 *Creator*: {{ $json.username }}\n🆔 *ID*: {{ $json.creator_id }}\n📊 *Transaction*: {{ $json.transaction_id }}\n\n━━━━━━━━━━━━━━━━━━━━━━\n⚠️ *Risk Assessment*\n• Score: *{{ $json.fds_result.risk_score }}/100*\n• Level: *{{ $json.fds_result.risk_level }}*\n• Confidence: {{ $json.fds_result.confidence }}%\n\n━━━━━━━━━━━━━━━━━━━━━━\n🔍 *Detected Patterns*\n{{ $json.fds_result.detected_patterns.map(p => '• ' + p).join('\\n') }}\n\n━━━━━━━━━━━━━━━━━━━━━━\n💰 *Settlement Impact*\n• Views: {{ $json.views.toLocaleString() }}\n• Calculated Reward: ${{ $json.reward }}\n• Status: *{{ $json.settlement_status }}*\n• Action: {{ $json.settlement_action }}\n\n━━━━━━━━━━━━━━━━━━━━━━\n📋 *Reason*\n{{ $json.fds_result.reason }}\n\n_Recommendation: {{ $json.fds_result.recommendation }}_",
+        "otherOptions": {}
+      },
+      "id": "slack-risk",
+      "name": "Alert: High Risk",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [1540, 200]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "channel": {
+          "__rl": true,
+          "mode": "name",
+          "value": "#settlements"
+        },
+        "text": "=✅ *[Settlement Approved]*\n\n👤 {{ $json.username }}\n💰 ${{ $json.reward }} → Payment Queue\n📊 Views: {{ $json.views.toLocaleString() }}\n🔐 Risk Score: {{ $json.fds_result.risk_score }}/100 ({{ $json.fds_result.risk_level }})\n\n_TXN: {{ $json.transaction_id }}_",
+        "otherOptions": {}
+      },
+      "id": "slack-approved",
+      "name": "Log: Approved Settlement",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [1540, 400]
+    }
+  ],
+  "connections": {
+    "Daily 6AM Settlement": {
+      "main": [
+        [{ "node": "Get Creator View Data (Mock)", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Creator View Data (Mock)": {
+      "main": [
+        [{ "node": "Prepare Settlement Data", "type": "main", "index": 0 }]
+      ]
+    },
+    "Prepare Settlement Data": {
+      "main": [
+        [{ "node": "Calculate Dynamic Reward", "type": "main", "index": 0 }]
+      ]
+    },
+    "Calculate Dynamic Reward": {
+      "main": [
+        [{ "node": "AI Fraud Detection", "type": "main", "index": 0 }]
+      ]
+    },
+    "OpenAI GPT-4 (FDS)": {
+      "ai_languageModel": [
+        [{ "node": "AI Fraud Detection", "type": "ai_languageModel", "index": 0 }]
+      ]
+    },
+    "AI Fraud Detection": {
+      "main": [
+        [{ "node": "Process FDS Result", "type": "main", "index": 0 }]
+      ]
+    },
+    "Process FDS Result": {
+      "main": [
+        [{ "node": "Check Risk Level", "type": "main", "index": 0 }]
+      ]
+    },
+    "Check Risk Level": {
+      "main": [
+        [{ "node": "Alert: High Risk", "type": "main", "index": 0 }],
+        [{ "node": "Log: Approved Settlement", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "timezone": "Asia/Seoul"
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "Monetization" },
+    { "name": "FDS" },
+    { "name": "Risk Management" }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2024-11-26T00:00:00.000Z",
+  "versionId": "1"
+}
