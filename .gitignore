@@ -41,6 +41,10 @@ Thumbs.db
 *.swp
 *.swo
 
+# Claude Code
+.claude/
+*.current_workflow_plan.md
+
 # Python virtual environments
 venv/
 .venv/
