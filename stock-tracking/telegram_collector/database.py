@@ -650,5 +650,5 @@ if __name__ == "__main__":
     migrate_database()
     # 그 다음 초기화 (새 테이블/인덱스 생성)
     init_database()
-    print("\n📊 Stats:", get_stats())
-    print("📊 Processing Stats:", get_processing_stats())
+    print("\n[STATS] Stats:", get_stats())
+    print("[STATS] Processing Stats:", get_processing_stats())

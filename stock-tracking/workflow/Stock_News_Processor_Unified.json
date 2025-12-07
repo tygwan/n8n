@@ -1,0 +1,222 @@
+{
+  "name": "Stock News Processor (Unified)",
+  "nodes": [
+    {
+      "id": "schedule-trigger",
+      "name": "Hourly Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-1400, 200],
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "hours"}]
+        }
+      }
+    },
+    {
+      "id": "manual-trigger",
+      "name": "Manual Trigger (Backfill)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-1400, 400],
+      "parameters": {}
+    },
+    {
+      "id": "fetch-messages",
+      "name": "Fetch Unanalyzed Messages",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-1100, 300],
+      "parameters": {
+        "url": "http://host.docker.internal:8000/messages/unanalyzed",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {"name": "limit", "value": "10000"},
+            {"name": "priority_first", "value": "true"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "check-messages",
+      "name": "Check Messages Exist",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-860, 300],
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "check-count",
+              "leftValue": "={{ $json.count }}",
+              "rightValue": 0,
+              "operator": {"type": "number", "operation": "gt"}
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "no-messages",
+      "name": "No Messages - Stop",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [-620, 500],
+      "parameters": {}
+    },
+    {
+      "id": "split-messages",
+      "name": "Split Messages",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [-620, 200],
+      "parameters": {
+        "fieldToSplitOut": "messages",
+        "options": {}
+      }
+    },
+    {
+      "id": "batch-messages",
+      "name": "Batch Messages (10 per batch)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-380, 200],
+      "parameters": {
+        "jsCode": "// Batch messages for GPT processing (max 10 per batch)\nconst items = $input.all();\nconst batchSize = 10;\nconst batches = [];\n\nfor (let i = 0; i < items.length; i += batchSize) {\n  const batch = items.slice(i, i + batchSize);\n  const texts = batch.map(item => {\n    const msg = item.json;\n    return `[ID:${msg.id}] ${msg.channel_name}: ${msg.text?.substring(0, 500) || ''}`;\n  }).join('\\n---\\n');\n  \n  batches.push({\n    json: {\n      batch_index: Math.floor(i / batchSize),\n      message_ids: batch.map(item => item.json.id),\n      texts: texts,\n      count: batch.length\n    }\n  });\n}\n\nreturn batches;"
+      }
+    },
+    {
+      "id": "gpt-analysis",
+      "name": "GPT-4o-mini Analysis",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.4,
+      "position": [-140, 200],
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a financial news analyst. Analyze the following stock-related messages.\n\nMESSAGES:\n{{ $json.texts }}\n\nFor EACH message [ID:X], provide analysis in this JSON format:\n```json\n[\n  {\n    \"id\": <message_id>,\n    \"theme_tags\": \"#tag1,#tag2\",\n    \"sentiment_tag\": \"#bullish|#bearish|#neutral\",\n    \"summary\": \"1-2 sentence summary in Korean\",\n    \"key_facts\": \"key numbers/facts\",\n    \"investment_insight\": \"brief investment implication in Korean\",\n    \"message_type\": \"시황|뉴스|리포트|분석|알림\",\n    \"priority\": 1-5\n  }\n]\n```\n\nTHEME TAGS (use exactly these Korean tags):\n- Sector: #반도체, #AI, #바이오, #금융, #코인, #IPO, #배당\n- Signal: #매수, #매도, #관망\n- Event: #실적, #공시, #이슈, #시황\n\nMESSAGE_TYPE:\n- 시황: Market overview, index movements, macro trends\n- 뉴스: Breaking news, company announcements\n- 리포트: Analyst reports, research\n- 분석: Technical/fundamental analysis\n- 알림: Alerts, price movements\n\nPRIORITY:\n- 5: Urgent (급등/급락, breaking news)\n- 4: High (significant price movement, important news)\n- 3: Medium (regular news with tickers)\n- 2: Low (general market info)\n- 1: Minimal (noise, spam)\n\nRespond ONLY with valid JSON array."
+      }
+    },
+    {
+      "id": "openai-model",
+      "name": "OpenAI GPT-4o-mini",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [-140, 420],
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {
+          "maxTokens": 3000,
+          "temperature": 0.2
+        }
+      }
+    },
+    {
+      "id": "parse-response",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [100, 200],
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nlet text = response.text || response.output || '';\n\n// Remove markdown code blocks\ntext = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n\n// Extract JSON array\nlet analyses = [];\ntry {\n  const startIdx = text.indexOf('[');\n  const endIdx = text.lastIndexOf(']');\n  if (startIdx !== -1 && endIdx !== -1) {\n    const jsonStr = text.substring(startIdx, endIdx + 1);\n    analyses = JSON.parse(jsonStr);\n  }\n} catch (e) {\n  console.log('Parse error:', e.message);\n  return [];\n}\n\n// Get original message IDs from batch\nconst batchData = $('Batch Messages (10 per batch)').first().json;\nconst originalIds = batchData.message_ids || [];\n\n// Slack channel mapping based on themes\nconst CHANNEL_MAP = {\n  '#반도체': 'stock-반도체',\n  '#AI': 'stock-ai',\n  '#바이오': 'stock-바이오',\n  '#금융': 'stock-금융',\n  '#코인': 'stock-금융',\n  '#IPO': 'stock-ipo',\n  '#배당': 'stock-ipo',\n  '#시황': 'stock-시황',\n  '#매수': 'stock-매수',\n  '#매도': 'stock-매도'\n};\n\nreturn analyses.map((a, index) => {\n  const messageId = originalIds[index] || a.id;\n  const themeTags = a.theme_tags || '';\n  const sentimentTag = a.sentiment_tag || '';\n  \n  const slackChannels = new Set();\n  \n  Object.entries(CHANNEL_MAP).forEach(([tag, channel]) => {\n    if (themeTags.includes(tag)) {\n      slackChannels.add(channel);\n    }\n  });\n  \n  if (sentimentTag.includes('#bullish') || themeTags.includes('#매수')) {\n    slackChannels.add('stock-매수');\n  }\n  if (sentimentTag.includes('#bearish') || themeTags.includes('#매도')) {\n    slackChannels.add('stock-매도');\n  }\n  \n  if (a.message_type === '시황') {\n    slackChannels.add('stock-시황');\n  }\n  \n  if (a.priority >= 4) {\n    slackChannels.add('stock-alerts');\n  }\n  \n  if (slackChannels.size === 0) {\n    slackChannels.add('stock-daily');\n  }\n  \n  return {\n    json: {\n      message_id: messageId,\n      theme_tags: themeTags,\n      sentiment_tag: sentimentTag,\n      summary: a.summary || '',\n      key_facts: a.key_facts || '',\n      investment_insight: a.investment_insight || '',\n      message_type: a.message_type || '뉴스',\n      priority: a.priority || 3,\n      slack_channels: Array.from(slackChannels).join(',')\n    }\n  };\n});"
+      }
+    },
+    {
+      "id": "update-db",
+      "name": "Update AI Analysis in DB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [340, 200],
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://host.docker.internal:8000/messages/{{ $json.message_id }}/ai-analysis",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {"name": "theme_tags", "value": "={{ $json.theme_tags }}"},
+            {"name": "sentiment_tag", "value": "={{ $json.sentiment_tag }}"},
+            {"name": "summary", "value": "={{ $json.summary }}"},
+            {"name": "key_facts", "value": "={{ $json.key_facts }}"},
+            {"name": "investment_insight", "value": "={{ $json.investment_insight }}"},
+            {"name": "slack_channels", "value": "={{ $json.slack_channels }}"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "route-to-slack",
+      "name": "Route to Slack Channels",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [580, 200],
+      "parameters": {
+        "jsCode": "const parsedItems = $('Parse AI Response').all();\nconst channelGroups = {};\n\nparsedItems.forEach(item => {\n  const data = item.json;\n  const channels = (data.slack_channels || '').split(',').filter(c => c);\n  \n  channels.forEach(channel => {\n    if (!channelGroups[channel]) {\n      channelGroups[channel] = [];\n    }\n    channelGroups[channel].push(data);\n  });\n});\n\nif (Object.keys(channelGroups).length === 0) {\n  return [];\n}\n\nconst priorityEmoji = {\n  5: '🚨',\n  4: '🔴',\n  3: '🟡',\n  2: '🔵',\n  1: '⚪'\n};\n\nreturn Object.entries(channelGroups).map(([channel, messages]) => {\n  const formattedMsgs = messages.map(m => {\n    const emoji = priorityEmoji[m.priority] || '🔵';\n    return `${emoji} ${m.theme_tags} ${m.sentiment_tag}\\n*${m.summary}*\\n> ${m.key_facts || '-'}\\n💡 ${m.investment_insight || '-'}`;\n  }).join('\\n\\n---\\n\\n');\n  \n  return {\n    json: {\n      channel: channel,\n      message_count: messages.length,\n      message_ids: messages.map(m => m.message_id),\n      formatted_text: formattedMsgs,\n      timestamp: new Date().toISOString()\n    }\n  };\n});"
+      }
+    },
+    {
+      "id": "send-to-slack",
+      "name": "Send to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [820, 200],
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $json.channel }}",
+          "mode": "name"
+        },
+        "text": "=📢 *AI 분석 업데이트* ({{ $json.message_count }}건) - {{ $now.format('MM/DD HH:mm') }}\n\n{{ $json.formatted_text }}",
+        "otherOptions": {}
+      }
+    },
+    {
+      "id": "mark-sent",
+      "name": "Mark Sent to Slack",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1060, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/messages/sent-to-slack",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ \"message_ids\": $('Route to Slack Channels').item.json.message_ids }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "log-completion",
+      "name": "Log Completion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 200],
+      "parameters": {
+        "jsCode": "const routeItems = $('Route to Slack Channels').all();\nconst totalMessages = routeItems.reduce((sum, item) => sum + item.json.message_count, 0);\nconst channels = routeItems.map(item => item.json.channel);\n\nreturn [{\n  json: {\n    status: 'completed',\n    total_messages: totalMessages,\n    channels_notified: channels,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      }
+    }
+  ],
+  "connections": {
+    "Hourly Schedule": {"main": [[{"node": "Fetch Unanalyzed Messages", "type": "main", "index": 0}]]},
+    "Manual Trigger (Backfill)": {"main": [[{"node": "Fetch Unanalyzed Messages", "type": "main", "index": 0}]]},
+    "Fetch Unanalyzed Messages": {"main": [[{"node": "Check Messages Exist", "type": "main", "index": 0}]]},
+    "Check Messages Exist": {"main": [[{"node": "Split Messages", "type": "main", "index": 0}], [{"node": "No Messages - Stop", "type": "main", "index": 0}]]},
+    "Split Messages": {"main": [[{"node": "Batch Messages (10 per batch)", "type": "main", "index": 0}]]},
+    "Batch Messages (10 per batch)": {"main": [[{"node": "GPT-4o-mini Analysis", "type": "main", "index": 0}]]},
+    "OpenAI GPT-4o-mini": {"ai_languageModel": [[{"node": "GPT-4o-mini Analysis", "type": "ai_languageModel", "index": 0}]]},
+    "GPT-4o-mini Analysis": {"main": [[{"node": "Parse AI Response", "type": "main", "index": 0}]]},
+    "Parse AI Response": {"main": [[{"node": "Update AI Analysis in DB", "type": "main", "index": 0}]]},
+    "Update AI Analysis in DB": {"main": [[{"node": "Route to Slack Channels", "type": "main", "index": 0}]]},
+    "Route to Slack Channels": {"main": [[{"node": "Send to Slack", "type": "main", "index": 0}]]},
+    "Send to Slack": {"main": [[{"node": "Mark Sent to Slack", "type": "main", "index": 0}]]},
+    "Mark Sent to Slack": {"main": [[{"node": "Log Completion", "type": "main", "index": 0}]]}
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

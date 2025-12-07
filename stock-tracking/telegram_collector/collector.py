@@ -260,21 +260,30 @@ async def select_channels(client) -> list:
 # ============================================
 # 과거 메시지 수집
 # ============================================
-async def backfill_messages(client, channel_ids: list, limit_per_channel: int = 200):
-    """과거 메시지 백필"""
+async def backfill_messages(client, channel_ids: list, days: int = 14):
+    """과거 메시지 백필 (기간 기반)"""
+    from datetime import timedelta
 
     if not channel_ids:
         return
 
-    log(f"\n📥 과거 메시지를 수집하시겠습니까? (채널당 최대 {limit_per_channel}개)")
-    log("   y/yes = 수집, 다른 입력 = 건너뛰기")
-    answer = input("선택: ").strip().lower()
+    log(f"\n📥 과거 메시지 수집 설정")
+    log(f"   기본값: 최근 {days}일")
+    log("   다른 기간을 원하면 숫자 입력 (예: 7, 14, 30)")
+    log("   건너뛰려면 'n' 입력")
 
-    if answer not in ('y', 'yes'):
+    answer = input("기간(일): ").strip().lower()
+
+    if answer == 'n':
         log("⏭️ 과거 메시지 수집을 건너뜁니다.")
         return
 
-    log("\n📥 과거 메시지 수집 중...")
+    if answer.isdigit():
+        days = int(answer)
+
+    # 수집 기간 계산
+    min_date = datetime.now() - timedelta(days=days)
+    log(f"\n📥 최근 {days}일간 메시지 수집 중... ({min_date.strftime('%Y-%m-%d')} ~ 현재)")
 
     total_saved = 0
     for channel_id in channel_ids:
@@ -284,7 +293,11 @@ async def backfill_messages(client, channel_ids: list, limit_per_channel: int = 
             log(f"   {channel_name}...")
 
             count = 0
-            async for message in client.iter_messages(channel_id, limit=limit_per_channel):
+            async for message in client.iter_messages(channel_id, limit=None):
+                # 기간 체크 - 수집 기간 이전이면 중단
+                if message.date.replace(tzinfo=None) < min_date:
+                    break
+
                 if not message.text:
                     continue
 
@@ -312,7 +325,7 @@ async def backfill_messages(client, channel_ids: list, limit_per_channel: int = 
         except Exception as e:
             log(f"      → 오류: {e}")
 
-    log(f"\n✅ 총 {total_saved}개 과거 메시지 저장 완료")
+    log(f"\n✅ 총 {total_saved}개 과거 메시지 저장 완료 (최근 {days}일)")
 
 # ============================================
 # 메인

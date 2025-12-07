@@ -1,190 +1,337 @@
-# 📊 Stock Tracking System for n8n
+# Stock News Automation System
 
-텔레그램 채널에서 주식 종목을 수집하고, 미국/한국 주식을 자동 분석하여 알림을 보내는 n8n 워크플로우 시스템
+텔레그램 채널에서 주식 뉴스를 수집하고, AI로 분석하여 테마별 Slack 채널로 자동 라우팅하는 시스템
 
-## 🏗️ 시스템 구조
+## 시스템 아키텍처
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│              Main_Stock_Orchestrator                        │
-│         (스케줄/수동 트리거 → 전체 파이프라인 관리)            │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-          ┌───────────┴───────────┐
-          ▼                       ▼
-┌─────────────────────┐ ┌─────────────────────┐
-│  🇺🇸 US_Stock_Data   │ │  🇰🇷 KR_Stock_Data   │
-│     _Collector      │ │     _Collector      │
-│  ────────────────   │ │  ────────────────   │
-│  • Alpha Vantage    │ │  • KIS Developers   │
-│  • 기술지표         │ │  • DART 공시        │
-│  • 펀더멘털         │ │  • 자체 지표 계산    │
-│  • 뉴스 감성        │ │                     │
-└──────────┬──────────┘ └──────────┬──────────┘
-           │                       │
-           └───────────┬───────────┘
-                       ▼
-          ┌─────────────────────────┐
-          │  📊 Stock_Analysis      │
-          │       _Engine           │
-          │  ─────────────────      │
-          │  • AI 분석 (GPT-4o)     │
-          │  • 매력도 스코어링       │
-          │  • 리포트 생성          │
-          └───────────┬─────────────┘
-                      ▼
-          ┌─────────────────────────┐
-          │   📱 텔레그램 알림       │
-          └─────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         Stock News Automation                            │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+    ┌───────────────────────────────┼───────────────────────────────┐
+    │                               │                               │
+    ▼                               ▼                               ▼
+┌─────────┐                   ┌─────────┐                     ┌─────────┐
+│Telegram │ ──Telethon API──▶ │ SQLite  │ ──FastAPI REST──▶  │  n8n    │
+│Channels │                   │   DB    │                     │Workflow │
+└─────────┘                   └─────────┘                     └────┬────┘
+                                                                   │
+                                                          GPT-4o-mini
+                                                                   │
+                              ┌────────────────────────────────────┼────┐
+                              │                                    │    │
+                              ▼                                    ▼    ▼
+                        ┌──────────┐                         ┌──────────┐
+                        │  Slack   │ ◀── Theme Routing ────  │  Slack   │
+                        │ Channels │                         │ Channels │
+                        └──────────┘                         └──────────┘
+
+Slack Channels (10개):
+├── stock-반도체  (#반도체)
+├── stock-ai      (#AI)
+├── stock-바이오  (#바이오)
+├── stock-금융    (#금융, #코인)
+├── stock-ipo     (#IPO, #배당)
+├── stock-시황    (#시황, 시황 타입)
+├── stock-alerts  (priority >= 4)
+├── stock-daily   (기본 채널)
+├── stock-매수    (#매수, #bullish)
+└── stock-매도    (#매도, #bearish)
 ```
 
-## 📁 파일 구조
+## 개발 여정 (Development Journey)
+
+### Phase 1: 초기 설계와 시행착오
+
+처음에는 단순한 구조로 시작했습니다:
+- 텔레그램 메시지 수집 → 스프레드시트 저장
+
+**문제점**:
+- 스프레드시트는 대량 데이터 처리에 부적합
+- 실시간 분석이 어려움
+- 테마별 분류가 수동으로 필요
+
+### Phase 2: 아키텍처 재설계
+
+SQLite + FastAPI 조합으로 전환:
+```
+telegram_collector/
+├── collector.py   # Telethon 기반 수집기
+├── database.py    # SQLite 스키마 및 쿼리
+└── api.py         # FastAPI REST 엔드포인트
+```
+
+**개선점**:
+- WAL 모드로 동시 읽기/쓰기 지원
+- REST API로 n8n 연동 용이
+- 인덱싱으로 빠른 쿼리
+
+### Phase 3: n8n 워크플로우 통합
+
+초기에는 여러 개의 워크플로우를 만들었습니다:
+- `Stock News AI Analyzer` - 실시간 분석용
+- `Historical Data Backfill Processor` - 과거 데이터 처리용
+- `Telegram Batch Processor` - 초기 버전
+- `Telegram Channel Collector` - 초기 버전
+
+**문제점**:
+- 워크플로우가 분산되어 관리 어려움
+- 중복 로직 발생
+- Slack 라우팅이 명확하지 않음
+
+### Phase 4: 통합 워크플로우 완성
+
+**Stock News Processor (Unified)** - 최종 버전
+
+모든 기능을 하나의 워크플로우로 통합:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│           Stock News Processor (Unified)                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌──────────────┐    ┌──────────────┐                           │
+│  │   Hourly     │    │   Manual     │                           │
+│  │  Schedule    │    │  Trigger     │                           │
+│  └──────┬───────┘    └──────┬───────┘                           │
+│         │                   │                                    │
+│         └─────────┬─────────┘                                    │
+│                   ▼                                              │
+│         ┌─────────────────┐                                      │
+│         │ Fetch Messages  │ (limit: 10,000)                      │
+│         │  (unanalyzed)   │                                      │
+│         └────────┬────────┘                                      │
+│                  ▼                                               │
+│         ┌─────────────────┐                                      │
+│         │ Check Messages  │                                      │
+│         │     Exist       │───No───▶ Stop                        │
+│         └────────┬────────┘                                      │
+│                  │ Yes                                           │
+│                  ▼                                               │
+│         ┌─────────────────┐                                      │
+│         │ Batch Messages  │ (10 per batch)                       │
+│         │   for GPT       │                                      │
+│         └────────┬────────┘                                      │
+│                  ▼                                               │
+│         ┌─────────────────┐                                      │
+│         │  GPT-4o-mini    │                                      │
+│         │   Analysis      │                                      │
+│         └────────┬────────┘                                      │
+│                  ▼                                               │
+│         ┌─────────────────┐                                      │
+│         │ Parse Response  │ + Channel Routing                    │
+│         └────────┬────────┘                                      │
+│                  ▼                                               │
+│         ┌─────────────────┐                                      │
+│         │  Update DB      │                                      │
+│         └────────┬────────┘                                      │
+│                  ▼                                               │
+│         ┌─────────────────┐                                      │
+│         │ Route to Slack  │ (theme-based)                        │
+│         │   Channels      │                                      │
+│         └────────┬────────┘                                      │
+│                  ▼                                               │
+│         ┌─────────────────┐                                      │
+│         │ Send to Slack   │                                      │
+│         └────────┬────────┘                                      │
+│                  ▼                                               │
+│         ┌─────────────────┐                                      │
+│         │  Mark Sent      │                                      │
+│         └────────┬────────┘                                      │
+│                  ▼                                               │
+│         ┌─────────────────┐                                      │
+│         │ Log Completion  │                                      │
+│         └─────────────────┘                                      │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## 해결한 주요 문제들
+
+### 1. Docker 환경에서 localhost 접근 불가
+
+**문제**: n8n이 Docker 컨테이너에서 실행될 때 `localhost:8000`으로 FastAPI 접근 불가
+
+**해결**: 모든 API URL을 `http://host.docker.internal:8000`으로 변경
+
+### 2. Mark Sent to Slack JSON 파싱 오류
+
+**문제**: `JSON parameter needs to be valid JSON [item 0]`
+
+**원인**: `$json.message_ids`가 Slack 응답을 참조하고 있었음
+
+**해결**:
+```javascript
+// Before (오류)
+{{ $json.message_ids }}
+
+// After (정상)
+={{ JSON.stringify({ "message_ids": $('Route to Slack Channels').item.json.message_ids }) }}
+```
+
+### 3. 메시지 수집 기준 변경
+
+**문제**: 개수 기반(200개) 수집은 기간 파악이 어려움
+
+**해결**: 기간 기반 수집으로 변경 (기본 14일)
+```python
+# collector.py
+min_date = datetime.now() - timedelta(days=days)
+if message.date.replace(tzinfo=None) < min_date:
+    break
+```
+
+### 4. Slack 채널 라우팅
+
+**문제**: 테마별 분류가 명확하지 않음
+
+**해결**: 태그 기반 매핑 시스템 구현
+```javascript
+const CHANNEL_MAP = {
+  '#반도체': 'stock-반도체',
+  '#AI': 'stock-ai',
+  '#바이오': 'stock-바이오',
+  '#금융': 'stock-금융',
+  '#코인': 'stock-금융',
+  '#IPO': 'stock-ipo',
+  '#배당': 'stock-ipo',
+  '#시황': 'stock-시황',
+  '#매수': 'stock-매수',
+  '#매도': 'stock-매도'
+};
+```
+
+## 파일 구조
 
 ```
 stock-tracking/
-├── README.md                      # 이 문서
-├── US_Stock_Data_Collector.json   # 미국 주식 데이터 수집
-├── KR_Stock_Data_Collector.json   # 한국 주식 데이터 수집
-├── Stock_Analysis_Engine.json     # AI 통합 분석
-└── Main_Stock_Orchestrator.json   # 메인 오케스트레이터
+├── README.md                    # 이 문서
+├── telegram_collector/
+│   ├── collector.py             # Telethon 기반 메시지 수집기
+│   ├── database.py              # SQLite 스키마 및 쿼리 함수
+│   ├── api.py                   # FastAPI REST 엔드포인트
+│   └── telegram_data.db         # SQLite 데이터베이스
+└── workflow/
+    └── Stock_News_Processor_Unified.json  # 통합 n8n 워크플로우
 ```
 
-## 🚀 설치 방법
+## 설치 및 실행
 
-### 1. n8n에 워크플로우 Import
+### 1. 의존성 설치
 
-각 JSON 파일을 순서대로 import:
-
-1. `US_Stock_Data_Collector.json`
-2. `KR_Stock_Data_Collector.json`
-3. `Stock_Analysis_Engine.json`
-4. `Main_Stock_Orchestrator.json`
-
-**Import 방법**: n8n → Workflows → Import from File
-
-### 2. API 키 발급
-
-| 서비스 | 용도 | 발급 링크 | 비고 |
-|--------|------|----------|------|
-| **Alpha Vantage** | 미국 주식 | [alphavantage.co](https://www.alphavantage.co/support/#api-key) | 무료 25 calls/day |
-| **KIS Developers** | 한국 주식 | [apiportal.koreainvestment.com](https://apiportal.koreainvestment.com/intro) | 한투 계좌 필요 |
-| **DART** | 한국 공시 | [opendart.fss.or.kr](https://opendart.fss.or.kr/) | 무료 10,000 calls/day |
-| **OpenAI** | AI 분석 | [platform.openai.com](https://platform.openai.com/) | 유료 |
-| **Telegram Bot** | 알림 | [@BotFather](https://t.me/botfather) | 무료 |
-
-### 3. 각 워크플로우 설정
-
-#### US_Stock_Data_Collector
-- `Set Ticker` 노드 → `YOUR_ALPHA_VANTAGE_API_KEY` 변경
-
-#### KR_Stock_Data_Collector
-- `Set Config` 노드:
-  - `YOUR_KIS_APP_KEY` 변경
-  - `YOUR_KIS_APP_SECRET` 변경
-  - `YOUR_DART_API_KEY` 변경
-
-#### Stock_Analysis_Engine
-- `Call US Collector` 노드 → US_Stock_Data_Collector 워크플로우 선택
-- `Call KR Collector` 노드 → KR_Stock_Data_Collector 워크플로우 선택
-- `OpenAI Model` 노드 → OpenAI Credentials 연결
-
-#### Main_Stock_Orchestrator
-- `Telegram Config` 노드 → `YOUR_TELEGRAM_CHAT_ID` 변경
-- `Call Analysis Engine` 노드 → Stock_Analysis_Engine 선택
-- `Send to Telegram` 노드 → Telegram Bot Credentials 연결
-- `OpenAI Extractor` 노드 → OpenAI Credentials 연결
-
-### 4. (선택) TelePilot 설치
-
-비공개 채널 수집을 위해:
-
-1. Settings → Community nodes
-2. `@telepilotco/n8n-nodes-telepilot` 설치
-3. `Fetch Channel Messages` 노드를 TelePilot으로 교체
-4. 텔레그램 계정 인증
-
-## 📊 분석 지표
-
-### 기술적 분석 (40%)
-| 지표 | 설명 | 신호 |
-|------|------|------|
-| RSI | 상대강도지수 (14일) | <30 과매도, >70 과매수 |
-| MACD | 이동평균수렴확산 | 히스토그램 양수=상승, 음수=하락 |
-| Bollinger Bands | 변동성 밴드 | 하단터치=반등, 상단이탈=과열 |
-| 이동평균 | SMA 20/60 | 골든크로스/데드크로스 |
-
-### 펀더멘털 분석 (35%)
-| 지표 | 설명 | 기준 |
-|------|------|------|
-| PER | 주가수익비율 | 업종 평균 대비 저평가 |
-| PBR | 주가순자산비율 | <1 자산가치 대비 저평가 |
-| ROE | 자기자본이익률 | >15% 우수 |
-| 배당수익률 | - | >3% 매력적 |
-
-### 뉴스/감성 분석 (25%)
-- 미국: Alpha Vantage 뉴스 감성 점수
-- 한국: DART 공시 기반 키워드 분석
-
-## 📱 출력 예시
-
-```
-📊 주식 분석 리포트 (2025-12-04)
-━━━━━━━━━━━━━━━━━━━━
-
-🇺🇸 NVDA | NVIDIA Corp
-📈 매력도: 85/100 🟢
-
-기술적: RSI 58 (중립), MACD 상승 전환
-펀더멘털: PER 45.2, ROE 56%
-
-✅ 강력매수
-• AI 반도체 수요 지속 증가
-• 기술적 조정 후 반등 신호
-• HBM 경쟁 우위
-
-⚠️ 리스크: 밸류에이션 부담
-
-━━━━━━━━━━━━━━━━━━━━
-
-🇰🇷 005930 | 삼성전자
-📈 매력도: 72/100 🟡
-
-기술적: RSI 42, SMA60 지지
-펀더멘털: PER 12.8, PBR 1.1
-
-✅ 매수
-• HBM 양산 본격화
-• 배당수익률 2.5%
-• 반도체 사이클 바닥 근접
-
-⚠️ 리스크: 수출 규제 불확실성
-
-━━━━━━━━━━━━━━━━━━━━
-🤖 AI 분석 | 투자 참고용
+```bash
+cd telegram_collector
+pip install telethon fastapi uvicorn
 ```
 
-## ⚠️ 주의사항
+### 2. Telegram API 설정
 
-1. **투자 조언 아님**: AI 분석 결과는 참고용이며, 투자 결정은 본인 책임
-2. **API 한도**: 무료 API는 호출 제한 있음 (캐싱 권장)
-3. **규제 준수**: 자본시장법에 따라 비영리 개인 용도로만 사용
-4. **계정 보안**: TelePilot 사용 시 텔레그램 계정 밴 주의
+[my.telegram.org](https://my.telegram.org)에서 API ID/Hash 발급
 
-## 🔧 커스터마이징
+### 3. 메시지 수집 시작
 
-### 분석 기준 변경
-`Stock_Analysis_Engine.json`의 `AI Analysis` 노드에서 시스템 프롬프트 수정
+```bash
+python collector.py
+```
 
-### 필터링 기준 변경
-`Filter Attractive Stocks` 노드에서 매력도 점수 임계값 조정 (기본: 60)
+- 처음 실행 시 Telegram 인증 필요
+- 채널 선택 및 기간 설정 (기본 14일)
 
-### 스케줄 변경
-`Main_Stock_Orchestrator.json`의 `Schedule Trigger` 노드에서 간격 조정 (기본: 2시간)
+### 4. API 서버 실행
 
-## 📝 라이선스
+```bash
+python api.py
+# 또는
+uvicorn api:app --host 0.0.0.0 --port 8000
+```
 
-개인 사용 목적으로 자유롭게 사용 및 수정 가능
+### 5. n8n 워크플로우 Import
+
+1. n8n → Workflows → Import from File
+2. `workflow/Stock_News_Processor_Unified.json` 선택
+3. Credentials 연결:
+   - OpenAI API (GPT-4o-mini)
+   - Slack Bot Token
+
+### 6. Slack 채널 생성
+
+다음 채널들을 Slack에서 생성:
+- `stock-반도체`, `stock-ai`, `stock-바이오`
+- `stock-금융`, `stock-ipo`, `stock-시황`
+- `stock-alerts`, `stock-daily`
+- `stock-매수`, `stock-매도`
+
+## GPT 분석 포맷
+
+각 메시지는 다음 형식으로 분석됩니다:
+
+```json
+{
+  "id": 12345,
+  "theme_tags": "#반도체,#AI",
+  "sentiment_tag": "#bullish",
+  "summary": "엔비디아 실적 발표 예정, 시장 기대감 상승",
+  "key_facts": "Q4 실적 발표 1/24, 예상 EPS $4.50",
+  "investment_insight": "단기 변동성 예상, 실적 확인 후 진입 권장",
+  "message_type": "뉴스",
+  "priority": 4
+}
+```
+
+### 테마 태그
+- 섹터: `#반도체`, `#AI`, `#바이오`, `#금융`, `#코인`, `#IPO`, `#배당`
+- 시그널: `#매수`, `#매도`, `#관망`
+- 이벤트: `#실적`, `#공시`, `#이슈`, `#시황`
+
+### 메시지 타입
+- `시황`: 시장 개요, 지수 동향
+- `뉴스`: 속보, 기업 발표
+- `리포트`: 애널리스트 리포트
+- `분석`: 기술적/펀더멘털 분석
+- `알림`: 가격 알림, 급등락
+
+### 우선순위 (1-5)
+- 5: 긴급 (급등/급락, 속보)
+- 4: 높음 (주요 가격 변동)
+- 3: 중간 (일반 뉴스)
+- 2: 낮음 (시장 정보)
+- 1: 최소 (노이즈)
+
+## API 엔드포인트
+
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| GET | `/messages/unanalyzed` | AI 미분석 메시지 조회 |
+| PUT | `/messages/{id}/ai-analysis` | AI 분석 결과 저장 |
+| POST | `/messages/sent-to-slack` | Slack 전송 완료 표시 |
+| GET | `/stats/processing` | 처리 현황 통계 |
+| GET | `/messages/historical` | 과거 데이터 조회 |
+
+## 운영 가이드
+
+### 실시간 처리
+- 워크플로우가 매시간 자동 실행
+- 미분석 메시지가 없으면 자동 중단
+
+### 과거 데이터 백필
+1. `Manual Trigger (Backfill)` 버튼 클릭
+2. 최대 10,000개 메시지 일괄 처리
+3. 배치당 10개씩 GPT 분석
+
+### 데이터 초기화
+```bash
+# telegram_data.db 삭제 후 collector.py 재실행
+rm telegram_collector/telegram_data.db
+python collector.py
+```
+
+## 주의사항
+
+- **API 비용**: GPT-4o-mini 사용량에 따른 OpenAI 비용 발생
+- **Rate Limit**: Telegram API 및 Slack API 제한 고려
+- **투자 조언 아님**: AI 분석 결과는 참고용이며 투자 결정은 본인 책임
 
 ---
 
-**Created with n8n + Claude** 🤖
+**Built with**: Python, Telethon, FastAPI, SQLite, n8n, GPT-4o-mini, Slack
