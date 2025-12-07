@@ -24,7 +24,7 @@ This repository showcases production-grade n8n workflows with AI integration, de
 - **Automated Stock Analysis** - Real-time stock tracking with AI-powered insights
 - **Viral Marketing Engine** - TikTok trend analysis and creator settlement automation
 - **Production-Ready** - Battle-tested workflows with comprehensive error handling
-- **AI Integration** - GPT-4 powered analysis and intelligent automation
+- **AI Integration** - GPT-4o-mini powered analysis and intelligent automation
 - **Cost-Optimized** - Token usage optimization and API cost management
 
 ---
@@ -46,7 +46,7 @@ This repository showcases production-grade n8n workflows with AI integration, de
 - 🇺🇸 **US Stock data** via Alpha Vantage API
 - 🇰🇷 **Korean Stock data** via KIS Developers API
 - 📈 **Technical indicators** (RSI, MACD, Bollinger Bands)
-- 💡 **AI-powered insights** using GPT-4 analysis
+- 💡 **AI-powered insights** using GPT-4o-mini analysis
 - 📱 **Telegram notifications** for real-time alerts
 - 🔄 **Automated scheduling** every 2 hours
 - ⚡ **Error handling** with retry mechanisms
@@ -113,14 +113,14 @@ This repository showcases production-grade n8n workflows with AI integration, de
 |-----------|-------------|------|---------------|--------------|
 | **Data Collection** | Alpha Vantage | Free (25/day) | 12 calls/day | $0 |
 | | KIS Developers | Free | Unlimited | $0 |
-| **AI Analysis** | OpenAI GPT-4 | ~$0.03/1K input | 2K tokens × 12/day | ~$22 |
-| | | ~$0.06/1K output | 500 tokens × 12/day | ~$9 |
+| **AI Analysis** | OpenAI GPT-4o-mini | ~$0.150/1M input | 2K tokens × 12/day | ~$0.11 |
+| | | ~$0.600/1M output | 500 tokens × 12/day | ~$0.11 |
 | **Notifications** | Telegram Bot | Free | Unlimited | $0 |
-| **Total** | | | | **~$31/month** |
+| **Total** | | | | **~$0.22/month** |
 
 **Cost Optimization Strategies**:
 - ✅ Alpha Vantage free tier (25 calls/day) sufficient for 2-hour intervals
-- ✅ GPT-4 prompt engineering to minimize token usage
+- ✅ GPT-4o-mini for cost-effective AI analysis (~140x cheaper than GPT-4)
 - ✅ Caching technical indicator calculations
 - ✅ Telegram instead of paid SMS services
 
@@ -131,15 +131,15 @@ This repository showcases production-grade n8n workflows with AI integration, de
 | Component | API/Service | Cost | Usage Pattern | Monthly Est. |
 |-----------|-------------|------|---------------|--------------|
 | **Data Scraping** | Apify (TikTok Scraper) | $0-$49/mo | 5K units (free) | $0-$49 |
-| **AI Analysis** | OpenAI GPT-4 | ~$0.03/1K input | 10K tokens × 7/week | ~$84 |
-| | | ~$0.06/1K output | 2K tokens × 7/week | ~$34 |
+| **AI Analysis** | OpenAI GPT-4o-mini | ~$0.150/1M input | 10K tokens × 7/week | ~$0.05 |
+| | | ~$0.600/1M output | 2K tokens × 7/week | ~$0.04 |
 | **Notifications** | Slack Webhook | Free | Unlimited | $0 |
 | **TikTok API** | TikTok Ads Platform | Free (approval) | Campaign metrics | $0 |
-| **Total** | | | | **~$118-167/month** |
+| **Total** | | | | **~$0.09-49/month** |
 
 **Cost Optimization Strategies**:
 - ✅ Apify free tier usage optimization (5K compute units/month)
-- ✅ GPT-4 → GPT-3.5-turbo for non-critical analysis (90% cost reduction)
+- ✅ GPT-4o-mini for cost-effective AI analysis (AI costs <$0.10/month)
 - ✅ Batch processing for trend analysis (reduce API calls)
 - ✅ Caching Apify results for 24 hours
 - ⚠️ Waiting for TikTok API approval (currently blocked)
@@ -155,7 +155,7 @@ This repository showcases production-grade n8n workflows with AI integration, de
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
 ### AI & APIs
-![OpenAI](https://img.shields.io/badge/OpenAI_GPT--4-412991?style=for-the-badge&logo=openai&logoColor=white)
+![OpenAI](https://img.shields.io/badge/OpenAI_GPT--4o--mini-412991?style=for-the-badge&logo=openai&logoColor=white)
 ![Alpha Vantage](https://img.shields.io/badge/Alpha_Vantage-0055FF?style=for-the-badge)
 ![TikTok API](https://img.shields.io/badge/TikTok_API-000000?style=for-the-badge&logo=tiktok&logoColor=white)
 ![Apify](https://img.shields.io/badge/Apify-0077FF?style=for-the-badge)
@@ -188,7 +188,7 @@ This repository showcases production-grade n8n workflows with AI integration, de
 
 3. **OpenAI API** - [Get Key](https://platform.openai.com/api-keys)
    - Pay-per-use pricing
-   - GPT-4: ~$0.03/1K input tokens, ~$0.06/1K output tokens
+   - GPT-4o-mini: $0.150/1M input tokens, $0.600/1M output tokens
 
 4. **Telegram Bot Token** - [Create Bot via @BotFather](https://t.me/botfather)
    - Completely free
@@ -265,15 +265,15 @@ n8n/
 
 | Feature | Stock Tracking | Virality |
 |---------|---------------|----------|
-| **AI Analysis** | ✅ GPT-4 | ✅ GPT-4 |
+| **AI Analysis** | ✅ GPT-4o-mini | ✅ GPT-4o-mini |
 | **Automation** | ✅ Scheduled (2-hour) | ✅ Event-driven |
 | **Data Collection** | ✅ Multi-source (US + KR) | ✅ TikTok Scraper |
 | **Notifications** | ✅ Telegram | ✅ Slack |
 | **Error Handling** | ✅ Retry + Logging | ✅ Multi-layer Validation |
 | **Status** | 🟢 Production | 🟡 Paused (API approval) |
 | **Complexity** | Medium | High |
-| **Monthly Cost** | ~$31 | ~$118-167 |
-| **Free Tier Viable** | ✅ Yes (with limits) | ⚠️ Partial (Apify limits) |
+| **Monthly Cost** | ~$0.22 | ~$0.09-49 |
+| **Free Tier Viable** | ✅ Yes | ⚠️ Partial (Apify limits) |
 
 ---
 
@@ -282,7 +282,7 @@ n8n/
 ### 1. **API Cost Optimization**
 - **Stock Tracking**: Alpha Vantage free tier (25/day) perfectly aligns with 2-hour intervals (12 calls/day)
 - **Virality**: Apify free tier (5K units) = ~50 TikTok scrapes/month → batch processing critical
-- **GPT-4 Token Management**: Structured prompts reduce token usage by 40-60%
+- **GPT-4o-mini Selection**: ~140x cheaper than GPT-4 with sufficient quality for analysis tasks
 - **Caching Strategy**: Store API responses for 1-24 hours based on data freshness needs
 
 ### 2. **Error Handling & Resilience**
@@ -292,7 +292,7 @@ n8n/
 - **Session Management**: Telegram session persistence across n8n restarts
 
 ### 3. **AI Prompt Engineering**
-- **Structured Output**: JSON-mode for GPT-4 reduces parsing errors by 95%
+- **Structured Output**: JSON-mode for GPT-4o-mini reduces parsing errors by 95%
 - **Context Minimization**: Send only essential data (not full API responses)
 - **Chain-of-Thought**: Multi-step reasoning improves analysis quality
 - **Temperature Tuning**: 0.3 for consistent analysis, 0.7 for creative insights
@@ -313,7 +313,7 @@ n8n/
 | Alpha Vantage rate limit | >25 calls/day | Reduce frequency or cache data |
 | KIS API authentication fails | Expired credentials | Refresh token in n8n credentials |
 | Telegram bot not responding | Invalid token | Verify token with @BotFather |
-| GPT-4 timeout | Large prompts | Reduce context size, use GPT-3.5 |
+| GPT-4o-mini timeout | Large prompts | Reduce context size or batch requests |
 
 ### Virality
 | Issue | Cause | Solution |
