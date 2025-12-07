@@ -1,0 +1,180 @@
+{
+  "name": "US_Stock_Data_Collector",
+  "nodes": [
+    {
+      "id": "trigger",
+      "name": "Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 300],
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "set_ticker",
+      "name": "Set Ticker",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [220, 300],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ticker",
+              "name": "ticker",
+              "value": "={{ $json.ticker }}",
+              "type": "string"
+            },
+            {
+              "id": "api_key",
+              "name": "api_key",
+              "value": "YOUR_ALPHA_VANTAGE_API_KEY",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true
+      }
+    },
+    {
+      "id": "get_quote",
+      "name": "Get Quote",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 100],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={{ $json.ticker }}&apikey={{ $json.api_key }}"
+      }
+    },
+    {
+      "id": "get_rsi",
+      "name": "Get RSI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 250],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://www.alphavantage.co/query?function=RSI&symbol={{ $('Set Ticker').item.json.ticker }}&interval=daily&time_period=14&series_type=close&apikey={{ $('Set Ticker').item.json.api_key }}"
+      }
+    },
+    {
+      "id": "get_macd",
+      "name": "Get MACD",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 400],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://www.alphavantage.co/query?function=MACD&symbol={{ $('Set Ticker').item.json.ticker }}&interval=daily&series_type=close&apikey={{ $('Set Ticker').item.json.api_key }}"
+      }
+    },
+    {
+      "id": "get_bbands",
+      "name": "Get Bollinger Bands",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 550],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://www.alphavantage.co/query?function=BBANDS&symbol={{ $('Set Ticker').item.json.ticker }}&interval=daily&time_period=20&series_type=close&apikey={{ $('Set Ticker').item.json.api_key }}"
+      }
+    },
+    {
+      "id": "get_overview",
+      "name": "Get Fundamentals",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 700],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://www.alphavantage.co/query?function=OVERVIEW&symbol={{ $('Set Ticker').item.json.ticker }}&apikey={{ $('Set Ticker').item.json.api_key }}"
+      }
+    },
+    {
+      "id": "get_news",
+      "name": "Get News Sentiment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 850],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers={{ $('Set Ticker').item.json.ticker }}&limit=10&apikey={{ $('Set Ticker').item.json.api_key }}"
+      }
+    },
+    {
+      "id": "wait_parallel",
+      "name": "Wait for All",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [720, 400],
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "multiplex",
+        "options": {}
+      }
+    },
+    {
+      "id": "normalize_data",
+      "name": "Normalize Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 400],
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "// 입력 데이터 수집\nconst allItems = $input.all();\nconst ticker = $('Set Ticker').first().json.ticker;\n\n// 각 API 응답에서 데이터 추출\nlet quoteData = {};\nlet rsiData = {};\nlet macdData = {};\nlet bbandsData = {};\nlet overviewData = {};\nlet newsData = {};\n\n// 모든 아이템에서 데이터 찾기\nfor (const item of allItems) {\n  const json = item.json;\n  if (json['Global Quote']) quoteData = json['Global Quote'];\n  if (json['Technical Analysis: RSI']) rsiData = json['Technical Analysis: RSI'];\n  if (json['Technical Analysis: MACD']) macdData = json['Technical Analysis: MACD'];\n  if (json['Technical Analysis: BBANDS']) bbandsData = json['Technical Analysis: BBANDS'];\n  if (json['Symbol'] && json['PERatio']) overviewData = json;\n  if (json['feed']) newsData = json;\n}\n\n// 최신 RSI 값 추출\nconst rsiDates = Object.keys(rsiData);\nconst latestRsi = rsiDates.length > 0 ? parseFloat(rsiData[rsiDates[0]]?.RSI) : null;\n\n// 최신 MACD 값 추출\nconst macdDates = Object.keys(macdData);\nconst latestMacd = macdDates.length > 0 ? {\n  value: parseFloat(macdData[macdDates[0]]?.MACD || 0),\n  signal: parseFloat(macdData[macdDates[0]]?.MACD_Signal || 0),\n  histogram: parseFloat(macdData[macdDates[0]]?.MACD_Hist || 0)\n} : { value: 0, signal: 0, histogram: 0 };\n\n// 최신 Bollinger Bands 값 추출\nconst bbandsDates = Object.keys(bbandsData);\nconst latestBbands = bbandsDates.length > 0 ? {\n  upper: parseFloat(bbandsData[bbandsDates[0]]?.['Real Upper Band'] || 0),\n  middle: parseFloat(bbandsData[bbandsDates[0]]?.['Real Middle Band'] || 0),\n  lower: parseFloat(bbandsData[bbandsDates[0]]?.['Real Lower Band'] || 0)\n} : null;\n\n// 뉴스 감성 점수 계산\nconst feeds = newsData.feed || [];\nlet sentimentSum = 0;\nlet sentimentCount = 0;\nconst headlines = [];\n\nfeeds.slice(0, 5).forEach(item => {\n  if (item.overall_sentiment_score) {\n    sentimentSum += parseFloat(item.overall_sentiment_score);\n    sentimentCount++;\n  }\n  if (item.title) {\n    headlines.push(item.title);\n  }\n});\n\nconst avgSentiment = sentimentCount > 0 ? sentimentSum / sentimentCount : 0;\n\n// 추세 판단\nlet trend = 'neutral';\nif (latestRsi !== null) {\n  if (latestRsi > 60 && latestMacd.histogram > 0) trend = 'bullish';\n  else if (latestRsi < 40 && latestMacd.histogram < 0) trend = 'bearish';\n}\n\n// 현재가\nconst currentPrice = parseFloat(quoteData['05. price']) || 0;\n\n// Bollinger Band 위치 계산 (0-100%)\nlet bbPosition = null;\nif (latestBbands && currentPrice > 0) {\n  const range = latestBbands.upper - latestBbands.lower;\n  if (range > 0) {\n    bbPosition = ((currentPrice - latestBbands.lower) / range * 100).toFixed(1);\n  }\n}\n\n// 52주 고점 대비 위치\nconst week52High = parseFloat(overviewData['52WeekHigh']) || 0;\nconst week52Low = parseFloat(overviewData['52WeekLow']) || 0;\nlet pricePosition52w = null;\nif (week52High > week52Low) {\n  pricePosition52w = ((currentPrice - week52Low) / (week52High - week52Low) * 100).toFixed(1);\n}\n\n// 통합 스키마로 정규화\nconst normalizedData = {\n  ticker: ticker,\n  name: overviewData.Name || ticker,\n  market: 'US',\n  currency: 'USD',\n  \n  // 가격 정보\n  price: currentPrice,\n  change_pct: parseFloat(quoteData['10. change percent']?.replace('%', '')) || 0,\n  volume: parseInt(quoteData['06. volume']) || 0,\n  high: parseFloat(quoteData['03. high']) || 0,\n  low: parseFloat(quoteData['04. low']) || 0,\n  \n  // 기술적 지표\n  technical: {\n    rsi: latestRsi,\n    rsi_signal: latestRsi > 70 ? 'overbought' : latestRsi < 30 ? 'oversold' : 'neutral',\n    macd: latestMacd,\n    macd_signal: latestMacd.histogram > 0 ? 'bullish' : 'bearish',\n    bollinger: latestBbands,\n    bb_position: bbPosition,\n    trend: trend,\n    price_position_52w: pricePosition52w\n  },\n  \n  // 펀더멘털\n  fundamental: {\n    per: parseFloat(overviewData.PERatio) || null,\n    pbr: parseFloat(overviewData.PriceToBookRatio) || null,\n    roe: parseFloat(overviewData.ReturnOnEquityTTM) || null,\n    market_cap: parseInt(overviewData.MarketCapitalization) || 0,\n    dividend_yield: overviewData.DividendYield ? parseFloat(overviewData.DividendYield) * 100 : null,\n    eps: parseFloat(overviewData.EPS) || null,\n    sector: overviewData.Sector || '',\n    industry: overviewData.Industry || '',\n    beta: parseFloat(overviewData.Beta) || null,\n    week52_high: week52High,\n    week52_low: week52Low\n  },\n  \n  // 뉴스/감성\n  sentiment: {\n    score: parseFloat(avgSentiment.toFixed(3)),\n    label: avgSentiment > 0.15 ? 'positive' : avgSentiment < -0.15 ? 'negative' : 'neutral',\n    news_count: feeds.length,\n    top_headlines: headlines\n  },\n  \n  // 메타데이터\n  collected_at: new Date().toISOString(),\n  data_source: 'Alpha Vantage'\n};\n\nreturn [{ json: normalizedData }];"
+      }
+    },
+    {
+      "id": "sticky_note_1",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-80, 60],
+      "parameters": {
+        "content": "## 🇺🇸 US Stock Data Collector\n\n### 입력\n```json\n{ \"ticker\": \"AAPL\" }\n```\n\n### 수집 데이터\n- 📈 현재가 (Global Quote)\n- 📊 RSI (14일)\n- 📉 MACD\n- 📏 Bollinger Bands\n- 💰 펀더멘털 (PER, PBR, ROE 등)\n- 📰 뉴스 감성\n\n### 출력\n통합 스키마 JSON (한국 주식과 동일 형식)",
+        "width": 300,
+        "height": 300
+      }
+    },
+    {
+      "id": "sticky_note_2",
+      "name": "API Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [200, 60],
+      "parameters": {
+        "content": "## ⚠️ API Key 설정\n\n`Set Ticker` 노드에서\n`YOUR_ALPHA_VANTAGE_API_KEY`를\n실제 API 키로 변경하세요.\n\n### 발급 링크\nhttps://www.alphavantage.co/support/#api-key\n\n### 무료 한도\n25 calls/day\n\n### 프리미엄 권장\n중기 분석 시 호출 수 증가",
+        "width": 240,
+        "height": 260
+      }
+    }
+  ],
+  "connections": {
+    "Workflow Trigger": {
+      "main": [[{"node": "Set Ticker", "type": "main", "index": 0}]]
+    },
+    "Set Ticker": {
+      "main": [[
+        {"node": "Get Quote", "type": "main", "index": 0},
+        {"node": "Get RSI", "type": "main", "index": 0},
+        {"node": "Get MACD", "type": "main", "index": 0},
+        {"node": "Get Bollinger Bands", "type": "main", "index": 0},
+        {"node": "Get Fundamentals", "type": "main", "index": 0},
+        {"node": "Get News Sentiment", "type": "main", "index": 0}
+      ]]
+    },
+    "Get Quote": {"main": [[{"node": "Wait for All", "type": "main", "index": 0}]]},
+    "Get RSI": {"main": [[{"node": "Wait for All", "type": "main", "index": 0}]]},
+    "Get MACD": {"main": [[{"node": "Wait for All", "type": "main", "index": 0}]]},
+    "Get Bollinger Bands": {"main": [[{"node": "Wait for All", "type": "main", "index": 0}]]},
+    "Get Fundamentals": {"main": [[{"node": "Wait for All", "type": "main", "index": 0}]]},
+    "Get News Sentiment": {"main": [[{"node": "Wait for All", "type": "main", "index": 0}]]},
+    "Wait for All": {"main": [[{"node": "Normalize Data", "type": "main", "index": 0}]]}
+  },
+  "settings": {"executionOrder": "v1"},
+  "tags": [{"name": "stock-analysis"}, {"name": "us-market"}]
+}

@@ -1,0 +1,28 @@
+version: "3.7"
+
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    restart: always
+    ports:
+      - "80:80"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=80
+      - N8N_PROTOCOL=https
+      - NODE_ENV=production
+      - WEBHOOK_URL=https://localhost:5678
+      - GENERIC_TIMEZONE=Asia/Seoul
+      - N8N_SECURE_COOKIE=false
+    env_file:
+      - .env
+    volumes:
+      - n8n_data:/home/node/.n8n
+      
+volumes:
+  n8n_data:
+    external: true
+
+networks:
+  n8n_network:
+    driver: bridge

@@ -1,0 +1,256 @@
+{
+  "name": "Main_Stock_Orchestrator",
+  "nodes": [
+    {
+      "id": "schedule_trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 2
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "manual_trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 500]
+    },
+    {
+      "id": "telegram_config",
+      "name": "Telegram Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [220, 400],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bot_chat_id",
+              "name": "bot_chat_id",
+              "value": "YOUR_TELEGRAM_CHAT_ID",
+              "type": "string"
+            },
+            {
+              "id": "channel_usernames",
+              "name": "channel_usernames",
+              "value": "channel1,channel2,channel3",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "fetch_messages",
+      "name": "Fetch Channel Messages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 400],
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "/*\n * TelePilot 커뮤니티 노드 사용 시:\n * 이 Code 노드를 TelePilot 노드로 교체하세요.\n * \n * 현재는 수동 테스트용 mock 데이터입니다.\n * 실제 구현 시 TelePilot으로 채널 메시지를 가져옵니다.\n */\n\n// Mock 데이터 (테스트용)\nconst mockMessages = [\n  {\n    text: \"오늘 NVDA 실적 발표 후 급등했네요. AI 반도체 수요 계속 증가 중\",\n    date: new Date().toISOString()\n  },\n  {\n    text: \"삼성전자(005930) HBM 양산 본격화, 2분기 실적 개선 기대\",\n    date: new Date().toISOString()\n  },\n  {\n    text: \"AAPL 아이폰16 판매 호조, 목표가 상향\",\n    date: new Date().toISOString()\n  },\n  {\n    text: \"SK하이닉스(000660) AI 메모리 수주 증가로 주가 상승\",\n    date: new Date().toISOString()\n  },\n  {\n    text: \"TSLA 자율주행 업데이트 발표 예정, 관심 종목\",\n    date: new Date().toISOString()\n  },\n  {\n    text: \"네이버(035420) 라인야후 이슈 해결 기대감\",\n    date: new Date().toISOString()\n  }\n];\n\n// 최근 2시간 메시지만 필터링 (실제 구현 시)\nconst twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);\nconst recentMessages = mockMessages.filter(m => \n  new Date(m.date) > twoHoursAgo\n);\n\nreturn [{\n  json: {\n    messages: recentMessages,\n    channel_count: 1,\n    message_count: recentMessages.length,\n    fetched_at: new Date().toISOString()\n  }\n}];\n\n/*\n * TelePilot 사용 시 설정:\n * 1. TelePilot 노드 추가\n * 2. Operation: Get Messages\n * 3. Chat: 채널 username 또는 ID\n * 4. Limit: 100\n */"
+      }
+    },
+    {
+      "id": "extract_tickers",
+      "name": "Extract Tickers with AI",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [660, 400],
+      "parameters": {
+        "options": {
+          "systemMessage": "당신은 주식 종목 추출 전문가입니다.\n\n주어진 텍스트에서 주식 티커/종목코드를 추출하세요.\n\n## 규칙\n1. 미국 주식: 영문 대문자 1-5자리 (AAPL, NVDA, TSLA 등)\n2. 한국 주식: 숫자 6자리 (005930, 000660 등)\n3. 종목명이 언급되면 티커로 변환:\n   - 삼성전자 → 005930\n   - SK하이닉스 → 000660\n   - 네이버 → 035420\n   - 카카오 → 035720\n   - LG에너지솔루션 → 373220\n   - 현대차 → 005380\n   - 기아 → 000270\n   - 셀트리온 → 068270\n   - 포스코홀딩스 → 005490\n   - KB금융 → 105560\n\n## 출력 형식 (JSON만)\n```json\n{\n  \"tickers\": [\"AAPL\", \"005930\", \"NVDA\"],\n  \"mentions\": [\n    {\"ticker\": \"AAPL\", \"context\": \"아이폰16 판매 호조\"},\n    {\"ticker\": \"005930\", \"context\": \"HBM 양산 본격화\"}\n  ]\n}\n```\n\n중복 제거하고, 확실한 종목만 포함하세요."
+        },
+        "promptType": "define",
+        "text": "=다음 메시지들에서 주식 종목을 추출하세요:\n\n{{ $json.messages.map(m => m.text).join('\\n\\n') }}"
+      }
+    },
+    {
+      "id": "openai_extractor",
+      "name": "OpenAI Extractor",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [660, 620],
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {
+          "temperature": 0.1
+        }
+      }
+    },
+    {
+      "id": "parse_tickers",
+      "name": "Parse Tickers",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 400],
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "const aiResponse = $input.first().json.output || $input.first().json.text || '';\n\nlet tickers = [];\nlet mentions = [];\n\n// JSON 추출 시도\ntry {\n  const jsonMatch = aiResponse.match(/```json([\\s\\S]*?)```/);\n  if (jsonMatch) {\n    const parsed = JSON.parse(jsonMatch[1].trim());\n    tickers = parsed.tickers || [];\n    mentions = parsed.mentions || [];\n  } else {\n    // JSON 블록 없이 직접 파싱\n    const directParse = JSON.parse(aiResponse);\n    tickers = directParse.tickers || [];\n    mentions = directParse.mentions || [];\n  }\n} catch (e) {\n  // 정규식으로 티커 직접 추출\n  const usMatches = aiResponse.match(/\\b[A-Z]{1,5}\\b/g) || [];\n  const krMatches = aiResponse.match(/\\b\\d{6}\\b/g) || [];\n  \n  tickers = [...new Set([...usMatches, ...krMatches])];\n}\n\n// 중복 제거 및 유효성 검사\nconst validTickers = [...new Set(tickers)].filter(t => {\n  const isUS = /^[A-Z]{1,5}$/.test(t);\n  const isKR = /^\\d{6}$/.test(t);\n  return isUS || isKR;\n});\n\nreturn [{\n  json: {\n    tickers: validTickers,\n    mentions: mentions,\n    count: validTickers.length,\n    extracted_at: new Date().toISOString()\n  }\n}];"
+      }
+    },
+    {
+      "id": "check_tickers",
+      "name": "Has Tickers?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1100, 400],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "ticker_check",
+              "leftValue": "={{ $json.count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "call_analysis_engine",
+      "name": "Call Analysis Engine",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [1320, 300],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "send_telegram",
+      "name": "Send to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1540, 300],
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $('Telegram Config').item.json.bot_chat_id }}",
+        "text": "={{ $json.report_html }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      }
+    },
+    {
+      "id": "no_tickers_log",
+      "name": "No Tickers Found",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1320, 500],
+      "parameters": {}
+    },
+    {
+      "id": "sticky_note_1",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-100, 60],
+      "parameters": {
+        "content": "## 🎯 Main Stock Orchestrator\n\n### 전체 흐름\n1. ⏰ 2시간마다 자동 실행\n2. 📱 텔레그램 채널에서 메시지 수집\n3. 🔍 AI로 티커 추출\n4. 📊 분석 엔진 호출\n5. 📤 결과 텔레그램 전송\n\n### 수동 실행\nManual Trigger로 즉시 실행 가능",
+        "width": 300,
+        "height": 260
+      }
+    },
+    {
+      "id": "sticky_note_2",
+      "name": "Config Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 160],
+      "parameters": {
+        "content": "## ⚠️ 설정 필요\n\n### Telegram Config 노드\n- `YOUR_TELEGRAM_CHAT_ID`: 알림받을 채팅 ID\n- `channel_usernames`: 수집할 채널들\n\n### TelePilot 설정 (선택)\n커뮤니티 노드 설치 후\n`Fetch Channel Messages` 교체",
+        "width": 280,
+        "height": 200
+      }
+    },
+    {
+      "id": "sticky_note_3",
+      "name": "Workflow Connection",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1280, 100],
+      "parameters": {
+        "content": "## 🔗 워크플로우 연결\n\n`Call Analysis Engine` 노드에서\n→ Stock_Analysis_Engine 선택\n\n### 텔레그램 Credentials\n`Send to Telegram` 노드에서\n→ Telegram Bot 연결",
+        "width": 260,
+        "height": 180
+      }
+    },
+    {
+      "id": "sticky_note_4",
+      "name": "TelePilot Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [400, 160],
+      "parameters": {
+        "content": "## 📱 TelePilot 커뮤니티 노드\n\n현재는 Mock 데이터 사용 중\n\n### 실제 구현 시:\n1. Settings → Community nodes\n2. `@telepilotco/n8n-nodes-telepilot` 설치\n3. 이 Code 노드를 TelePilot으로 교체\n4. 텔레그램 계정 인증\n\n### MTProto 필요 이유\n초대받은 비공개 채널 접근",
+        "width": 300,
+        "height": 240
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [[{"node": "Telegram Config", "type": "main", "index": 0}]]
+    },
+    "Manual Trigger": {
+      "main": [[{"node": "Telegram Config", "type": "main", "index": 0}]]
+    },
+    "Telegram Config": {
+      "main": [[{"node": "Fetch Channel Messages", "type": "main", "index": 0}]]
+    },
+    "Fetch Channel Messages": {
+      "main": [[{"node": "Extract Tickers with AI", "type": "main", "index": 0}]]
+    },
+    "OpenAI Extractor": {
+      "ai_languageModel": [[{"node": "Extract Tickers with AI", "type": "ai_languageModel", "index": 0}]]
+    },
+    "Extract Tickers with AI": {
+      "main": [[{"node": "Parse Tickers", "type": "main", "index": 0}]]
+    },
+    "Parse Tickers": {
+      "main": [[{"node": "Has Tickers?", "type": "main", "index": 0}]]
+    },
+    "Has Tickers?": {
+      "main": [
+        [{"node": "Call Analysis Engine", "type": "main", "index": 0}],
+        [{"node": "No Tickers Found", "type": "main", "index": 0}]
+      ]
+    },
+    "Call Analysis Engine": {
+      "main": [[{"node": "Send to Telegram", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {"executionOrder": "v1"},
+  "tags": [{"name": "stock-analysis"}, {"name": "orchestrator"}, {"name": "telegram"}]
+}

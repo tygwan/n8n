@@ -1,0 +1,238 @@
+{
+  "name": "KR_Stock_Data_Collector",
+  "nodes": [
+    {
+      "id": "trigger",
+      "name": "Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 300],
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "set_config",
+      "name": "Set Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [220, 300],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ticker",
+              "name": "ticker",
+              "value": "={{ $json.ticker }}",
+              "type": "string"
+            },
+            {
+              "id": "kis_app_key",
+              "name": "kis_app_key",
+              "value": "YOUR_KIS_APP_KEY",
+              "type": "string"
+            },
+            {
+              "id": "kis_app_secret",
+              "name": "kis_app_secret",
+              "value": "YOUR_KIS_APP_SECRET",
+              "type": "string"
+            },
+            {
+              "id": "dart_api_key",
+              "name": "dart_api_key",
+              "value": "YOUR_DART_API_KEY",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true
+      }
+    },
+    {
+      "id": "get_kis_token",
+      "name": "Get KIS Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "https://openapi.koreainvestment.com:9443/oauth2/tokenP",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "content-type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {"name": "grant_type", "value": "client_credentials"},
+            {"name": "appkey", "value": "={{ $json.kis_app_key }}"},
+            {"name": "appsecret", "value": "={{ $json.kis_app_secret }}"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "get_current_price",
+      "name": "Get Current Price",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 100],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-price?fid_cond_mrkt_div_code=J&fid_input_iscd={{ $('Set Config').item.json.ticker }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "authorization", "value": "=Bearer {{ $json.access_token }}"},
+            {"name": "appkey", "value": "={{ $('Set Config').item.json.kis_app_key }}"},
+            {"name": "appsecret", "value": "={{ $('Set Config').item.json.kis_app_secret }}"},
+            {"name": "tr_id", "value": "FHKST01010100"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "get_daily_price",
+      "name": "Get Daily Price (90days)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 250],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-price?fid_cond_mrkt_div_code=J&fid_input_iscd={{ $('Set Config').item.json.ticker }}&fid_period_div_code=D&fid_org_adj_prc=0",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "authorization", "value": "=Bearer {{ $('Get KIS Token').item.json.access_token }}"},
+            {"name": "appkey", "value": "={{ $('Set Config').item.json.kis_app_key }}"},
+            {"name": "appsecret", "value": "={{ $('Set Config').item.json.kis_app_secret }}"},
+            {"name": "tr_id", "value": "FHKST01010400"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "get_financial",
+      "name": "Get Financial Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 400],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/finance/financial-ratio?fid_cond_mrkt_div_code=J&fid_input_iscd={{ $('Set Config').item.json.ticker }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "authorization", "value": "=Bearer {{ $('Get KIS Token').item.json.access_token }}"},
+            {"name": "appkey", "value": "={{ $('Set Config').item.json.kis_app_key }}"},
+            {"name": "appsecret", "value": "={{ $('Set Config').item.json.kis_app_secret }}"},
+            {"name": "tr_id", "value": "FHKST66430300"}
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "get_dart_disclosure",
+      "name": "Get DART Disclosure",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 550],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://opendart.fss.or.kr/api/list.json?crtfc_key={{ $('Set Config').item.json.dart_api_key }}&corp_code={{ $('Set Config').item.json.ticker }}&bgn_de={{ $now.minus({days: 30}).format('yyyyMMdd') }}&end_de={{ $now.format('yyyyMMdd') }}&page_count=10",
+        "options": {}
+      }
+    },
+    {
+      "id": "wait_parallel",
+      "name": "Wait for All",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [900, 300],
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "multiplex",
+        "options": {}
+      }
+    },
+    {
+      "id": "calculate_indicators",
+      "name": "Calculate Indicators",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300],
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "// 입력 데이터 수집\nconst allItems = $input.all();\nconst ticker = $('Set Config').first().json.ticker;\n\n// 각 API 응답에서 데이터 추출\nlet currentPriceData = {};\nlet dailyPriceData = [];\nlet financialData = {};\nlet dartData = { list: [] };\n\nfor (const item of allItems) {\n  const json = item.json;\n  // KIS 현재가 응답\n  if (json.output && json.output.stck_prpr) {\n    currentPriceData = json.output;\n  }\n  // KIS 일별 시세 응답\n  if (json.output && Array.isArray(json.output)) {\n    dailyPriceData = json.output;\n  }\n  // KIS 재무비율 응답\n  if (json.output && json.output.per) {\n    financialData = json.output;\n  }\n  // DART 공시 응답\n  if (json.list) {\n    dartData = json;\n  }\n}\n\n// 종가 배열 추출 (일별 시세에서)\nconst closePrices = dailyPriceData\n  .map(d => parseFloat(d.stck_clpr))\n  .filter(p => !isNaN(p))\n  .reverse(); // 오래된 것부터 정렬\n\n// RSI 계산 (14일)\nfunction calculateRSI(prices, period = 14) {\n  if (prices.length < period + 1) return null;\n  \n  let gains = 0, losses = 0;\n  \n  for (let i = prices.length - period; i < prices.length; i++) {\n    const change = prices[i] - prices[i - 1];\n    if (change > 0) gains += change;\n    else losses -= change;\n  }\n  \n  const avgGain = gains / period;\n  const avgLoss = losses / period;\n  \n  if (avgLoss === 0) return 100;\n  const rs = avgGain / avgLoss;\n  return 100 - (100 / (1 + rs));\n}\n\n// 이동평균 계산\nfunction calculateSMA(prices, period) {\n  if (prices.length < period) return null;\n  const slice = prices.slice(-period);\n  return slice.reduce((a, b) => a + b, 0) / period;\n}\n\n// MACD 계산 (12, 26, 9)\nfunction calculateMACD(prices) {\n  if (prices.length < 26) return { value: 0, signal: 0, histogram: 0 };\n  \n  // EMA 계산\n  function ema(data, period) {\n    const k = 2 / (period + 1);\n    let emaVal = data[0];\n    for (let i = 1; i < data.length; i++) {\n      emaVal = data[i] * k + emaVal * (1 - k);\n    }\n    return emaVal;\n  }\n  \n  const ema12 = ema(prices, 12);\n  const ema26 = ema(prices, 26);\n  const macdLine = ema12 - ema26;\n  \n  // 시그널 (간단화: 최근 값 기준)\n  const signal = macdLine * 0.9; // 근사값\n  \n  return {\n    value: parseFloat(macdLine.toFixed(2)),\n    signal: parseFloat(signal.toFixed(2)),\n    histogram: parseFloat((macdLine - signal).toFixed(2))\n  };\n}\n\n// Bollinger Bands 계산\nfunction calculateBollinger(prices, period = 20, stdDev = 2) {\n  if (prices.length < period) return null;\n  \n  const slice = prices.slice(-period);\n  const sma = slice.reduce((a, b) => a + b, 0) / period;\n  \n  const squaredDiffs = slice.map(p => Math.pow(p - sma, 2));\n  const variance = squaredDiffs.reduce((a, b) => a + b, 0) / period;\n  const std = Math.sqrt(variance);\n  \n  return {\n    upper: parseFloat((sma + stdDev * std).toFixed(0)),\n    middle: parseFloat(sma.toFixed(0)),\n    lower: parseFloat((sma - stdDev * std).toFixed(0))\n  };\n}\n\n// 지표 계산\nconst rsi = calculateRSI(closePrices, 14);\nconst sma20 = calculateSMA(closePrices, 20);\nconst sma60 = calculateSMA(closePrices, 60);\nconst macd = calculateMACD(closePrices);\nconst bollinger = calculateBollinger(closePrices, 20);\n\n// 현재가\nconst currentPrice = parseFloat(currentPriceData.stck_prpr) || 0;\nconst changeRate = parseFloat(currentPriceData.prdy_ctrt) || 0;\nconst volume = parseInt(currentPriceData.acml_vol) || 0;\nconst high52w = parseFloat(currentPriceData.stck_hgpr) || 0;\nconst low52w = parseFloat(currentPriceData.stck_lwpr) || 0;\n\n// 추세 판단\nlet trend = 'neutral';\nif (rsi !== null) {\n  if (rsi > 60 && macd.histogram > 0) trend = 'bullish';\n  else if (rsi < 40 && macd.histogram < 0) trend = 'bearish';\n}\n\n// BB 위치 계산\nlet bbPosition = null;\nif (bollinger && currentPrice > 0) {\n  const range = bollinger.upper - bollinger.lower;\n  if (range > 0) {\n    bbPosition = ((currentPrice - bollinger.lower) / range * 100).toFixed(1);\n  }\n}\n\n// 공시 정보 처리\nconst disclosures = (dartData.list || []).slice(0, 5).map(d => ({\n  title: d.report_nm,\n  date: d.rcept_dt\n}));\n\n// 뉴스 감성 (공시 기반 간단 판단)\nlet sentimentScore = 0;\nconst positiveKeywords = ['증가', '상승', '흑자', '배당', '성장', '신고'];\nconst negativeKeywords = ['감소', '하락', '적자', '손실', '철회', '연기'];\n\ndisclosures.forEach(d => {\n  positiveKeywords.forEach(k => { if (d.title?.includes(k)) sentimentScore += 0.1; });\n  negativeKeywords.forEach(k => { if (d.title?.includes(k)) sentimentScore -= 0.1; });\n});\nsentimentScore = Math.max(-1, Math.min(1, sentimentScore));\n\n// 통합 스키마로 정규화\nconst normalizedData = {\n  ticker: ticker,\n  name: currentPriceData.hts_kor_isnm || ticker,\n  market: 'KR',\n  currency: 'KRW',\n  \n  // 가격 정보\n  price: currentPrice,\n  change_pct: changeRate,\n  volume: volume,\n  high: parseFloat(currentPriceData.stck_hgpr) || 0,\n  low: parseFloat(currentPriceData.stck_lwpr) || 0,\n  \n  // 기술적 지표\n  technical: {\n    rsi: rsi ? parseFloat(rsi.toFixed(2)) : null,\n    rsi_signal: rsi > 70 ? 'overbought' : rsi < 30 ? 'oversold' : 'neutral',\n    macd: macd,\n    macd_signal: macd.histogram > 0 ? 'bullish' : 'bearish',\n    sma_20: sma20 ? parseFloat(sma20.toFixed(0)) : null,\n    sma_60: sma60 ? parseFloat(sma60.toFixed(0)) : null,\n    bollinger: bollinger,\n    bb_position: bbPosition,\n    trend: trend,\n    price_position_52w: high52w > low52w ? \n      ((currentPrice - low52w) / (high52w - low52w) * 100).toFixed(1) : null\n  },\n  \n  // 펀더멘털\n  fundamental: {\n    per: parseFloat(financialData.per) || parseFloat(currentPriceData.per) || null,\n    pbr: parseFloat(financialData.pbr) || parseFloat(currentPriceData.pbr) || null,\n    roe: parseFloat(financialData.roe) || null,\n    market_cap: parseInt(currentPriceData.hts_avls) * 100000000 || 0,\n    dividend_yield: parseFloat(financialData.dvd_yld) || null,\n    eps: parseFloat(currentPriceData.eps) || null,\n    sector: '',\n    industry: '',\n    beta: null,\n    week52_high: high52w,\n    week52_low: low52w\n  },\n  \n  // 뉴스/감성 (공시 기반)\n  sentiment: {\n    score: parseFloat(sentimentScore.toFixed(3)),\n    label: sentimentScore > 0.15 ? 'positive' : sentimentScore < -0.15 ? 'negative' : 'neutral',\n    news_count: disclosures.length,\n    top_headlines: disclosures.map(d => `[${d.date}] ${d.title}`)\n  },\n  \n  // 메타데이터\n  collected_at: new Date().toISOString(),\n  data_source: 'KIS Developers, DART'\n};\n\nreturn [{ json: normalizedData }];"
+      }
+    },
+    {
+      "id": "sticky_note_1",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-80, 60],
+      "parameters": {
+        "content": "## 🇰🇷 KR Stock Data Collector\n\n### 입력\n```json\n{ \"ticker\": \"005930\" }\n```\n(삼성전자: 005930)\n\n### 수집 데이터\n- 📈 현재가 (KIS API)\n- 📊 일별 시세 90일 (기술지표 계산용)\n- 💰 재무비율 (PER, PBR, ROE)\n- 📰 DART 공시\n\n### 출력\n통합 스키마 JSON (미국 주식과 동일 형식)",
+        "width": 300,
+        "height": 320
+      }
+    },
+    {
+      "id": "sticky_note_2",
+      "name": "API Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [200, 60],
+      "parameters": {
+        "content": "## ⚠️ API Key 설정\n\n### 1. KIS Developers\n`Set Config` 노드에서:\n- `YOUR_KIS_APP_KEY`\n- `YOUR_KIS_APP_SECRET`\n\n발급: https://apiportal.koreainvestment.com\n(한국투자증권 계좌 필요)\n\n### 2. DART API\n- `YOUR_DART_API_KEY`\n\n발급: https://opendart.fss.or.kr\n(무료 10,000 calls/day)",
+        "width": 280,
+        "height": 300
+      }
+    },
+    {
+      "id": "sticky_note_3",
+      "name": "Note Code",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1080, 60],
+      "parameters": {
+        "content": "## 📊 자체 계산 지표\n\n- RSI (14일)\n- SMA (20일, 60일)\n- MACD (12, 26, 9)\n- Bollinger Bands (20일)\n\nKIS API에서 일별 시세를\n받아서 Code 노드에서 계산",
+        "width": 240,
+        "height": 200
+      }
+    }
+  ],
+  "connections": {
+    "Workflow Trigger": {
+      "main": [[{"node": "Set Config", "type": "main", "index": 0}]]
+    },
+    "Set Config": {
+      "main": [[{"node": "Get KIS Token", "type": "main", "index": 0}]]
+    },
+    "Get KIS Token": {
+      "main": [[
+        {"node": "Get Current Price", "type": "main", "index": 0},
+        {"node": "Get Daily Price (90days)", "type": "main", "index": 0},
+        {"node": "Get Financial Data", "type": "main", "index": 0},
+        {"node": "Get DART Disclosure", "type": "main", "index": 0}
+      ]]
+    },
+    "Get Current Price": {"main": [[{"node": "Wait for All", "type": "main", "index": 0}]]},
+    "Get Daily Price (90days)": {"main": [[{"node": "Wait for All", "type": "main", "index": 0}]]},
+    "Get Financial Data": {"main": [[{"node": "Wait for All", "type": "main", "index": 0}]]},
+    "Get DART Disclosure": {"main": [[{"node": "Wait for All", "type": "main", "index": 0}]]},
+    "Wait for All": {"main": [[{"node": "Calculate Indicators", "type": "main", "index": 0}]]}
+  },
+  "settings": {"executionOrder": "v1"},
+  "tags": [{"name": "stock-analysis"}, {"name": "kr-market"}]
+}

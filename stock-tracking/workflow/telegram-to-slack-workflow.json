@@ -1,0 +1,73 @@
+{
+  "name": "Telegram to Slack Router",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message", "channel_post"],
+        "additionalFields": {}
+      },
+      "id": "telegram-trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Telegram 메시지에서 텍스트 추출\nconst message = $input.first().json.message || $input.first().json.channel_post || {};\nconst text = message.text || '';\nconst chatId = message.chat?.id || '';\nconst username = message.from?.username || 'unknown';\n\n// 주식 티커 패턴 감지\nconst usTickerPattern = /\\b[A-Z]{1,5}\\b/g;\nconst krTickerPattern = /\\b\\d{6}\\b/g;\n\nconst usTickers = text.match(usTickerPattern) || [];\nconst krTickers = text.match(krTickerPattern) || [];\n\n// 메시지 타입 분류\nlet messageType = 'general';\nlet slackChannel = '#general';\n\nif (usTickers.length > 0 || krTickers.length > 0) {\n  messageType = 'stock_query';\n  slackChannel = '#stock-alerts';\n} else if (text.toLowerCase().includes('help') || text.includes('도움')) {\n  messageType = 'help';\n  slackChannel = '#support';\n}\n\nreturn [{\n  json: {\n    original_text: text,\n    chat_id: chatId,\n    username: username,\n    message_type: messageType,\n    us_tickers: usTickers,\n    kr_tickers: krTickers,\n    all_tickers: [...usTickers, ...krTickers],\n    slack_channel: slackChannel,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "classify-route",
+      "name": "Classify and Route",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $json.slack_channel }}"
+        },
+        "text": "=:telegram: *Telegram 메시지*\n\n*From:* {{ $json.username }}\n*Type:* {{ $json.message_type }}\n*Message:* {{ $json.original_text }}\n\n{{ $json.all_tickers.length > 0 ? ':chart_with_upwards_trend: Tickers: ' + $json.all_tickers.join(', ') : '' }}",
+        "otherOptions": {
+          "mrkdwn": true
+        }
+      },
+      "id": "send-to-slack",
+      "name": "Send to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [500, 300]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Classify and Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify and Route": {
+      "main": [
+        [
+          {
+            "node": "Send to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

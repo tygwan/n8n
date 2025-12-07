@@ -1,0 +1,12 @@
+{
+  "name": "using-git-worktrees",
+  "displayName": "Using Git Worktrees",
+  "version": "1.0.0",
+  "description": "Creates isolated git worktrees with smart directory selection and safety verification for feature work that needs isolation from current workspace",
+  "author": {
+    "name": "Tygwan",
+    "url": "https://github.com/tygwan"
+  },
+  "keywords": ["git", "worktree", "workflow", "isolation", "branch-management"],
+  "category": "Development Tools"
+}

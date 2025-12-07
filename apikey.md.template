@@ -1,0 +1,97 @@
+# 🔑 API Keys Template
+
+> ⚠️ **실제 사용 시**: 이 파일을 `apikey.md`로 복사하고 키값을 입력하세요.
+> ```bash
+> cp apikey.md.template apikey.md
+> ```
+
+## 📋 필수 API 키 목록
+
+### 한국투자증권 (KIS Developers)
+```
+kis_app_key : [발급처: https://apiportal.koreainvestment.com/intro]
+kis_app_secret : [발급처: 위와 동일 - 계좌 필요]
+```
+
+**발급 방법**:
+1. 한국투자증권 계좌 개설
+2. API 포털 가입
+3. App Key/Secret 발급 (모의투자 또는 실전투자)
+
+---
+
+### DART (금융감독원 전자공시)
+```
+dart_api_key : [발급처: https://opendart.fss.or.kr/]
+```
+
+**발급 방법**:
+1. OpenDART 회원가입
+2. 인증키 신청
+3. 즉시 발급 (무료, 10,000 calls/day)
+
+---
+
+### Google Cloud API
+```
+google cloud api key : [발급처: https://console.cloud.google.com/apis/credentials]
+google cloud api client id : [발급처: 위와 동일]
+google cloud api client secret : [발급처: 위와 동일]
+```
+
+**발급 방법**:
+1. Google Cloud Console 접속
+2. 프로젝트 생성
+3. API 사용 설정 (YouTube Data API 등)
+4. 사용자 인증 정보 > API 키/OAuth 2.0 클라이언트 ID 생성
+
+---
+
+## 추가 API 키 (선택)
+
+### Alpha Vantage (미국 주식)
+```
+alpha_vantage_api_key : [발급처: https://www.alphavantage.co/support/#api-key]
+```
+- 무료: 25 calls/day
+- 유료: Premium 플랜 ($50/월)
+
+### OpenAI
+```
+openai_api_key : [발급처: https://platform.openai.com/api-keys]
+```
+- GPT-4 사용 시 과금 발생
+
+### Telegram Bot
+```
+telegram_bot_token : [발급처: https://t.me/botfather]
+telegram_chat_id : [봇과 대화 후 /start 실행하여 확인]
+```
+
+### Slack Webhook
+```
+slack_webhook_url : [발급처: https://api.slack.com/messaging/webhooks]
+```
+
+### TikTok API
+```
+tiktok_access_token : [발급처: https://ads.tiktok.com/marketing_api/docs]
+```
+- TikTok 광고 계정 승인 필요
+
+---
+
+## 🔒 보안 주의사항
+
+1. ✅ `apikey.md`는 절대 GitHub에 커밋하지 마세요
+2. ✅ `.gitignore`에 `apikey.md` 포함 확인
+3. ✅ 환경 변수 사용 권장 (`.env` 파일)
+4. ⚠️ API 키 노출 시 즉시 재발급
+
+---
+
+## 📝 파일 관리
+
+- `apikey.md.template` - 이 파일 (GitHub에 포함)
+- `apikey.md` - 실제 키값 저장 (로컬 전용, .gitignore)
+- `API_SETUP_GUIDE.md` - 상세 설정 가이드 (로컬 전용)

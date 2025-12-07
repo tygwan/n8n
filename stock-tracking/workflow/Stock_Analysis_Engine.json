@@ -1,0 +1,284 @@
+{
+  "name": "Stock_Analysis_Engine",
+  "nodes": [
+    {
+      "id": "trigger",
+      "name": "Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 300],
+      "parameters": {
+        "inputSource": "passthrough"
+      }
+    },
+    {
+      "id": "classify_market",
+      "name": "Classify Market",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300],
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "// 입력: { tickers: [\"AAPL\", \"005930\", \"TSLA\", \"000660\"] }\nconst input = $input.first().json;\nconst tickers = input.tickers || [];\n\nconst usTickers = [];\nconst krTickers = [];\n\ntickers.forEach(ticker => {\n  const t = ticker.trim().toUpperCase();\n  // 한국 주식: 숫자 6자리\n  if (/^\\d{6}$/.test(t)) {\n    krTickers.push(t);\n  }\n  // 미국 주식: 영문 1-5자리\n  else if (/^[A-Z]{1,5}$/.test(t)) {\n    usTickers.push(t);\n  }\n});\n\nreturn [\n  {\n    json: {\n      us_tickers: usTickers,\n      kr_tickers: krTickers,\n      total_count: tickers.length\n    }\n  }\n];"
+      }
+    },
+    {
+      "id": "split_us",
+      "name": "Split US Tickers",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [440, 200],
+      "parameters": {
+        "fieldToSplitOut": "us_tickers",
+        "options": {}
+      }
+    },
+    {
+      "id": "split_kr",
+      "name": "Split KR Tickers",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [440, 400],
+      "parameters": {
+        "fieldToSplitOut": "kr_tickers",
+        "options": {}
+      }
+    },
+    {
+      "id": "call_us_collector",
+      "name": "Call US Collector",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [660, 200],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "call_kr_collector",
+      "name": "Call KR Collector",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [660, 400],
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "prepare_us_input",
+      "name": "Prepare US Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [550, 200],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {"id": "ticker", "name": "ticker", "value": "={{ $json }}", "type": "string"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "prepare_kr_input",
+      "name": "Prepare KR Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [550, 400],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {"id": "ticker", "name": "ticker", "value": "={{ $json }}", "type": "string"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "merge_all",
+      "name": "Merge All Data",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [880, 300],
+      "parameters": {
+        "mode": "append",
+        "options": {}
+      }
+    },
+    {
+      "id": "ai_analysis",
+      "name": "AI Analysis",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [1100, 300],
+      "parameters": {
+        "options": {
+          "systemMessage": "당신은 전문 주식 애널리스트입니다.\n\n## 분석 기준\n\n### 1. 기술적 분석 (40%)\n- RSI: 30 이하 과매도(매수 기회), 70 이상 과매수(주의)\n- MACD: 시그널 상향 돌파 긍정, 하향 돌파 부정\n- Bollinger Bands: 하단 터치 시 반등 가능, 상단 이탈 시 과열\n- 이동평균: 단기>장기 골든크로스 긍정\n- 52주 위치: 저점 근처 매력적\n\n### 2. 펀더멘털 분석 (35%)\n- PER: 업종 평균 대비 평가 (낮을수록 저평가)\n- PBR: 1 미만 자산가치 대비 저평가\n- ROE: 15% 이상 우수\n- 배당수익률: 3% 이상 매력적\n\n### 3. 뉴스/감성 분석 (25%)\n- 감성 점수: 양수면 긍정적 환경\n- 최근 공시/뉴스 내용 고려\n\n## 출력 형식 (JSON)\n```json\n{\n  \"ticker\": \"종목코드\",\n  \"name\": \"종목명\",\n  \"market\": \"US 또는 KR\",\n  \"attractiveness_score\": 0-100,\n  \"recommendation\": \"strong_buy|buy|hold|sell|strong_sell\",\n  \"key_factors\": [\"핵심 포인트 3개\"],\n  \"risk_factors\": [\"리스크 요소\"],\n  \"technical_summary\": \"기술적 분석 요약\",\n  \"fundamental_summary\": \"펀더멘털 요약\",\n  \"target_price\": null,\n  \"stop_loss\": null,\n  \"investment_horizon\": \"swing|mid_term|long_term\"\n}\n```\n\n각 종목에 대해 위 JSON 형식으로 분석해주세요."
+        },
+        "promptType": "define",
+        "text": "=다음 종목들을 분석해주세요:\n\n{{ JSON.stringify($input.all().map(item => item.json), null, 2) }}"
+      }
+    },
+    {
+      "id": "openai_model",
+      "name": "OpenAI Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [1100, 520],
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {
+          "temperature": 0.3
+        }
+      }
+    },
+    {
+      "id": "parse_response",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 300],
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "const aiResponse = $input.first().json.output || $input.first().json.text || '';\n\n// JSON 블록 추출\nconst jsonMatches = aiResponse.match(/```json([\\s\\S]*?)```/g) || [];\nconst results = [];\n\njsonMatches.forEach(match => {\n  try {\n    const jsonStr = match.replace(/```json\\n?/g, '').replace(/```/g, '').trim();\n    const parsed = JSON.parse(jsonStr);\n    results.push({ json: parsed });\n  } catch (e) {\n    // JSON 파싱 실패 시 무시\n  }\n});\n\n// JSON 블록이 없으면 전체를 파싱 시도\nif (results.length === 0) {\n  try {\n    // 배열 형태로 된 경우\n    const arrayMatch = aiResponse.match(/\\[([\\s\\S]*?)\\]/g);\n    if (arrayMatch) {\n      const parsed = JSON.parse(arrayMatch[0]);\n      if (Array.isArray(parsed)) {\n        parsed.forEach(item => results.push({ json: item }));\n      }\n    }\n  } catch (e) {\n    // 파싱 실패 시 원본 텍스트 반환\n    results.push({ \n      json: { \n        raw_response: aiResponse,\n        parse_error: true \n      } \n    });\n  }\n}\n\nreturn results.length > 0 ? results : [{ json: { error: 'No valid analysis found' } }];"
+      }
+    },
+    {
+      "id": "filter_attractive",
+      "name": "Filter Attractive Stocks",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [1540, 300],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "score_filter",
+              "leftValue": "={{ $json.attractiveness_score }}",
+              "rightValue": 60,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "format_report",
+      "name": "Format Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1760, 300],
+      "parameters": {
+        "language": "javaScript",
+        "mode": "runOnceForAllItems",
+        "jsCode": "const items = $input.all();\nconst now = new Date().toISOString().split('T')[0];\n\nlet htmlReport = `📊 <b>주식 분석 리포트</b> (${now})\\n`;\nhtmlReport += '━━━━━━━━━━━━━━━━━━━━\\n\\n';\n\n// 점수 기준 정렬\nconst sorted = items.sort((a, b) => \n  (b.json.attractiveness_score || 0) - (a.json.attractiveness_score || 0)\n);\n\nsorted.forEach((item, idx) => {\n  const s = item.json;\n  if (!s.ticker) return;\n  \n  const flag = s.market === 'US' ? '🇺🇸' : '🇰🇷';\n  const scoreEmoji = s.attractiveness_score >= 80 ? '🟢' : \n                     s.attractiveness_score >= 60 ? '🟡' : '🔴';\n  \n  const recMap = {\n    'strong_buy': '✅ 강력매수',\n    'buy': '✅ 매수',\n    'hold': '⚠️ 보유',\n    'sell': '❌ 매도',\n    'strong_sell': '❌ 강력매도'\n  };\n  \n  htmlReport += `${flag} <b>${s.ticker}</b> | ${s.name || ''}\\n`;\n  htmlReport += `📈 매력도: <b>${s.attractiveness_score || 'N/A'}/100</b> ${scoreEmoji}\\n\\n`;\n  \n  if (s.technical_summary) {\n    htmlReport += `기술적: ${s.technical_summary}\\n`;\n  }\n  if (s.fundamental_summary) {\n    htmlReport += `펀더멘털: ${s.fundamental_summary}\\n`;\n  }\n  \n  htmlReport += `\\n${recMap[s.recommendation] || s.recommendation || ''}\\n`;\n  \n  if (s.key_factors && s.key_factors.length > 0) {\n    s.key_factors.forEach(f => {\n      htmlReport += `• ${f}\\n`;\n    });\n  }\n  \n  if (s.risk_factors && s.risk_factors.length > 0) {\n    htmlReport += `\\n⚠️ 리스크: ${s.risk_factors.join(', ')}\\n`;\n  }\n  \n  htmlReport += '\\n━━━━━━━━━━━━━━━━━━━━\\n\\n';\n});\n\nhtmlReport += '🤖 AI 분석 | 투자 참고용';\n\nreturn [{\n  json: {\n    report_html: htmlReport,\n    stocks_analyzed: sorted.map(s => s.json),\n    total_count: sorted.length,\n    generated_at: new Date().toISOString()\n  }\n}];"
+      }
+    },
+    {
+      "id": "sticky_note_1",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-80, 60],
+      "parameters": {
+        "content": "## 📊 Stock Analysis Engine\n\n### 입력\n```json\n{\n  \"tickers\": [\"AAPL\", \"005930\", \"TSLA\"]\n}\n```\n\n### 처리 흐름\n1. 시장 분류 (US/KR)\n2. 개별 Collector 호출\n3. AI 통합 분석\n4. 매력도 필터링\n5. 리포트 생성\n\n### 출력\nHTML 형식 리포트 + 분석 JSON",
+        "width": 300,
+        "height": 300
+      }
+    },
+    {
+      "id": "sticky_note_2",
+      "name": "Workflow Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [620, 60],
+      "parameters": {
+        "content": "## ⚠️ 워크플로우 연결\n\n`Call US Collector` 노드에서:\n→ US_Stock_Data_Collector 선택\n\n`Call KR Collector` 노드에서:\n→ KR_Stock_Data_Collector 선택\n\n### OpenAI 설정\n`OpenAI Model` 노드에서:\n→ OpenAI API Credentials 연결",
+        "width": 280,
+        "height": 220
+      }
+    },
+    {
+      "id": "sticky_note_3",
+      "name": "Filter Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1500, 100],
+      "parameters": {
+        "content": "## 🎯 필터링 기준\n\n매력도 점수 60 이상만\n리포트에 포함\n\n(조정 가능)",
+        "width": 200,
+        "height": 140
+      }
+    }
+  ],
+  "connections": {
+    "Workflow Trigger": {
+      "main": [[{"node": "Classify Market", "type": "main", "index": 0}]]
+    },
+    "Classify Market": {
+      "main": [[
+        {"node": "Split US Tickers", "type": "main", "index": 0},
+        {"node": "Split KR Tickers", "type": "main", "index": 0}
+      ]]
+    },
+    "Split US Tickers": {
+      "main": [[{"node": "Prepare US Input", "type": "main", "index": 0}]]
+    },
+    "Split KR Tickers": {
+      "main": [[{"node": "Prepare KR Input", "type": "main", "index": 0}]]
+    },
+    "Prepare US Input": {
+      "main": [[{"node": "Call US Collector", "type": "main", "index": 0}]]
+    },
+    "Prepare KR Input": {
+      "main": [[{"node": "Call KR Collector", "type": "main", "index": 0}]]
+    },
+    "Call US Collector": {
+      "main": [[{"node": "Merge All Data", "type": "main", "index": 0}]]
+    },
+    "Call KR Collector": {
+      "main": [[{"node": "Merge All Data", "type": "main", "index": 1}]]
+    },
+    "Merge All Data": {
+      "main": [[{"node": "AI Analysis", "type": "main", "index": 0}]]
+    },
+    "OpenAI Model": {
+      "ai_languageModel": [[{"node": "AI Analysis", "type": "ai_languageModel", "index": 0}]]
+    },
+    "AI Analysis": {
+      "main": [[{"node": "Parse AI Response", "type": "main", "index": 0}]]
+    },
+    "Parse AI Response": {
+      "main": [[{"node": "Filter Attractive Stocks", "type": "main", "index": 0}]]
+    },
+    "Filter Attractive Stocks": {
+      "main": [[{"node": "Format Report", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {"executionOrder": "v1"},
+  "tags": [{"name": "stock-analysis"}, {"name": "ai-agent"}]
+}

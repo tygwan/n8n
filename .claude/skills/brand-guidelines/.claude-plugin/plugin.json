@@ -1,0 +1,12 @@
+{
+  "name": "brand-guidelines",
+  "displayName": "Brand Guidelines",
+  "version": "1.0.0",
+  "description": "Applies Anthropic's official brand colors and typography to any artifact that may benefit from having Anthropic's look-and-feel",
+  "author": {
+    "name": "Tygwan",
+    "url": "https://github.com/tygwan"
+  },
+  "keywords": ["branding", "anthropic", "design", "styling", "typography", "colors"],
+  "category": "UI/UX Development"
+}

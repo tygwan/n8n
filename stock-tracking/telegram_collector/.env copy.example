@@ -1,0 +1,7 @@
+# n8n Webhook URL
+N8N_WEBHOOK_URL=http://localhost:5678/webhook/telegram-collector
+
+# 특정 채널만 수집하려면 채널 ID 또는 username 입력 (쉼표 구분)
+# 비워두면 모든 가입 채널에서 수집
+# TARGET_CHANNELS=-1001234567890,@channel_username
+TARGET_CHANNELS=
